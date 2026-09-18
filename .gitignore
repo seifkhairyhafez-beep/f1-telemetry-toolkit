@@ -9,6 +9,10 @@ __pycache__/
 # Claude Code project config (local tool settings, not part of the project)
 .claude/
 
+# Personal working notes / dev logs (not part of the portfolio piece)
+f1-26-career-season-log.md
+f1-project-context.md
+
 # OS cruft
 Thumbs.db
 .DS_Store
