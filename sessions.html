@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>F1 25 — Session History</title>
+<style>
+  :root { --bg:#0d0d0d; --panel:#161616; --border:#2a2a2a; --red:#e8002d; --green:#39d353; --yellow:#ffd700; --blue:#00a8ff; --dim:#888; --white:#f0f0f0; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--white); font-family:'Segoe UI',monospace; font-size:13px; }
+  #header { display:flex; align-items:center; gap:20px; padding:8px 16px; background:var(--panel); border-bottom:2px solid var(--red); }
+  h1 { font-size:15px; font-weight:700; letter-spacing:2px; color:var(--red); }
+  a { color:var(--blue); font-size:12px; text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  #content { padding:16px; }
+  #toolbar { display:flex; align-items:center; gap:12px; margin-bottom:12px; min-height:28px; }
+  #status { color:var(--dim); font-size:12px; }
+  #merge-bar { display:none; align-items:center; gap:10px; }
+  #merge-bar.visible { display:flex; }
+  #sel-count { color:var(--yellow); font-size:12px; font-weight:700; }
+
+  table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  th { background:#1e1e1e; padding:8px 12px; text-align:left; font-size:10px; font-weight:700; color:var(--dim); letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid var(--border); }
+  td { padding:8px 12px; font-size:12px; border-bottom:1px solid #1a1a1a; vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:#1c1c1c; }
+  tr.selected td { background:#1a1a0a; }
+
+  input[type=checkbox] { accent-color:var(--yellow); width:14px; height:14px; cursor:pointer; }
+
+  .badge { display:inline-block; padding:2px 8px; border-radius:2px; font-size:10px; font-weight:700; letter-spacing:1px; }
+  .badge-tt    { background:#2a1a00; color:var(--yellow); }
+  .badge-race  { background:#1a0010; color:#ff4499; }
+  .badge-quali { background:#001a2a; color:var(--blue); }
+  .badge-fp    { background:#0d1a0d; color:var(--green); }
+  .badge-other { background:#222; color:var(--dim); }
+
+  .btn { font-size:10px; padding:3px 10px; border-radius:3px; cursor:pointer; font-weight:700; letter-spacing:1px; border:1px solid; }
+  .btn-export  { background:#1a2a1a; color:var(--green); border-color:var(--green); }
+  .btn-export:hover { background:#223a22; }
+  .btn-compare { background:#001a2a; color:var(--blue); border-color:var(--blue); margin-left:6px; }
+  .btn-compare:hover { background:#002a3a; }
+  .btn-merge    { background:#2a2000; color:var(--yellow); border-color:var(--yellow); font-size:11px; padding:4px 14px; }
+  .btn-merge:hover { background:#3a2e00; }
+  .btn-telem   { background:#1a001a; color:#cc88ff; border-color:#cc88ff; }
+  .btn-telem:hover { background:#280028; }
+  .btn-clear   { background:transparent; color:var(--dim); border-color:#444; font-size:11px; padding:4px 10px; }
+  .btn-clear:hover { color:var(--white); border-color:#888; }
+
+  .laps-cell  { color:var(--white); }
+  .time-cell  { font-family:monospace; color:var(--yellow); }
+  .track-cell { font-weight:700; }
+  .date-cell  { color:var(--dim); font-size:11px; }
+  .uid-cell   { color:#444; font-size:10px; font-family:monospace; }
+
+  #empty { text-align:center; padding:60px; color:var(--dim); }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>SESSION HISTORY</h1>
+  <a href="/dashboard">← Live Dashboard</a>
+  <a href="/compare">Lap Comparison →</a>
+</div>
+
+<div id="content">
+  <div id="toolbar">
+    <div id="status">Loading sessions…</div>
+    <div id="merge-bar">
+      <span id="sel-count"></span>
+      <button class="btn btn-merge" onclick="exportMerged()">EXPORT MERGED AI</button>
+      <button class="btn btn-clear" onclick="clearSelection()">Clear</button>
+    </div>
+  </div>
+  <div id="table-wrap"></div>
+</div>
+
+<script>
+const API = `http://${location.hostname}:8766`;
+
+const SESSION_TYPE_LABELS = {
+  0:'Unknown',
+  1:'P1', 2:'P2', 3:'P3', 4:'Short Practice',
+  5:'Q1', 6:'Q2', 7:'Q3', 8:'Short Quali', 9:'OSQ',
+  10:'Race', 11:'Race 2', 12:'Race 3', 13:'Time Trial',
+  14:'Sprint Shootout 1', 15:'Sprint Shootout 2', 16:'Sprint Shootout 3',
+  17:'Sprint Race', 18:'Time Trial',
+};
+
+function sessionBadgeClass(typeId) {
+  if ([13,18].includes(typeId)) return 'badge-tt';
+  if ([10,11,12,17].includes(typeId)) return 'badge-race';
+  if ([5,6,7,8,9,14,15,16].includes(typeId)) return 'badge-quali';
+  if ([1,2,3,4].includes(typeId)) return 'badge-fp';
+  return 'badge-other';
+}
+
+function msToStr(ms) {
+  if (!ms) return '—';
+  const m = Math.floor(ms / 60000);
+  const s = ((ms % 60000) / 1000).toFixed(3).padStart(6, '0');
+  return `${m}:${s}`;
+}
+
+function formatDate(ts) {
+  if (!ts) return '—';
+  return new Date(ts * 1000).toLocaleString(undefined, { dateStyle:'medium', timeStyle:'short' });
+}
+
+let selected = new Set();
+
+function toggleRow(uid, cb) {
+  if (cb.checked) selected.add(uid);
+  else selected.delete(uid);
+  cb.closest('tr').classList.toggle('selected', cb.checked);
+  updateMergeBar();
+}
+
+function updateMergeBar() {
+  const bar = document.getElementById('merge-bar');
+  const n = selected.size;
+  if (n >= 2) {
+    bar.classList.add('visible');
+    document.getElementById('sel-count').textContent = `${n} sessions selected`;
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+function clearSelection() {
+  selected.clear();
+  document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+  document.querySelectorAll('tr.selected').forEach(tr => tr.classList.remove('selected'));
+  updateMergeBar();
+}
+
+function exportSession(uid) {
+  window.location.href = `${API}/api/ai_export?session_uid=${uid}`;
+}
+
+function exportTelemetry(uid) {
+  window.location.href = `${API}/api/export_telemetry?session_uid=${uid}`;
+}
+
+function exportMerged() {
+  const params = [...selected].map(uid => `session_uid=${uid}`).join('&');
+  window.location.href = `${API}/api/export_multi?${params}`;
+}
+
+function goCompare(uid) {
+  window.location.href = `/compare?session_uid=${uid}`;
+}
+
+async function loadSessions() {
+  const statusEl = document.getElementById('status');
+  try {
+    const sessions = await fetch(`${API}/api/sessions`).then(r => r.json());
+    if (!sessions || sessions.length === 0) {
+      statusEl.textContent = '';
+      document.getElementById('table-wrap').innerHTML = '<div id="empty">No sessions recorded yet. Start driving!</div>';
+      return;
+    }
+    statusEl.textContent = `${sessions.length} session${sessions.length !== 1 ? 's' : ''} found`;
+    renderTable(sessions);
+  } catch (e) {
+    statusEl.textContent = 'Could not connect to telemetry server — is listener.py running?';
+  }
+}
+
+function renderTable(sessions) {
+  const rows = sessions.map(s => {
+    const typeId = s.session_type ?? 0;
+    const label = SESSION_TYPE_LABELS[typeId] ?? `Type ${typeId}`;
+    const badgeClass = sessionBadgeClass(typeId);
+    const uid = s.session_uid;
+    return `
+      <tr>
+        <td><input type="checkbox" data-uid="${uid}" onchange="toggleRow('${uid}', this)"></td>
+        <td class="date-cell">${formatDate(s.started_at)}</td>
+        <td class="track-cell">${s.track_name || '—'}</td>
+        <td><span class="badge ${badgeClass}">${label}</span></td>
+        <td class="laps-cell">${s.lap_count ?? 0}</td>
+        <td class="time-cell">${msToStr(s.best_lap_ms)}</td>
+        <td class="uid-cell">${uid}</td>
+        <td>
+          <button class="btn btn-export" data-uid="${uid}" onclick="exportSession(this.dataset.uid)">EXPORT AI</button>
+          <button class="btn btn-compare" data-uid="${uid}" onclick="goCompare(this.dataset.uid)">COMPARE LAPS</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  document.getElementById('table-wrap').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Date</th>
+          <th>Track</th>
+          <th>Type</th>
+          <th>Laps</th>
+          <th>Best Lap</th>
+          <th>Session ID</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+loadSessions();
+</script>
+</body>
+</html>

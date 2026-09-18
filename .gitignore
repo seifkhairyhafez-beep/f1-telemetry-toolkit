@@ -1,0 +1,14 @@
+# Session data (large, personal, regenerated locally)
+f1_telemetry.db
+*.db
+
+# Python
+__pycache__/
+*.pyc
+
+# Claude Code project config (local tool settings, not part of the project)
+.claude/
+
+# OS cruft
+Thumbs.db
+.DS_Store

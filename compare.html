@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>F1 25 — Lap Comparison</title>
+<style>
+  :root { --bg:#0d0d0d; --panel:#161616; --border:#2a2a2a; --red:#e8002d; --green:#39d353; --yellow:#ffd700; --blue:#00a8ff; --dim:#888; --white:#f0f0f0; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--white); font-family:'Segoe UI',monospace; font-size:13px; }
+  #header { display:flex; align-items:center; gap:20px; padding:8px 16px; background:var(--panel); border-bottom:2px solid var(--red); }
+  h1 { font-size:15px; font-weight:700; letter-spacing:2px; color:var(--red); }
+  a { color:var(--blue); font-size:12px; }
+  select { background:#222; color:var(--white); border:1px solid var(--border); padding:4px 8px; border-radius:3px; }
+  label { color:var(--dim); font-size:11px; margin-right:4px; }
+  button { background:var(--red); color:#fff; border:none; padding:6px 16px; border-radius:3px; cursor:pointer; font-weight:700; font-size:12px; }
+  button:hover { opacity:0.85; }
+  #controls { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:10px 16px; background:#111; border-bottom:1px solid var(--border); }
+  #charts { padding:10px; display:flex; flex-direction:column; gap:10px; }
+  .chart-panel { background:var(--panel); border:1px solid var(--border); border-radius:4px; padding:10px; }
+  .chart-title { font-size:10px; font-weight:700; color:var(--dim); letter-spacing:2px; margin-bottom:6px; }
+  canvas { display:block; width:100%; }
+  #lap-table { background:var(--panel); border:1px solid var(--border); border-radius:4px; margin:10px; border-collapse:collapse; width:calc(100% - 20px); }
+  #lap-table th { background:#222; padding:6px 10px; text-align:left; font-size:11px; font-weight:700; color:var(--dim); border-bottom:1px solid var(--border); }
+  #lap-table td { padding:5px 10px; font-size:11px; font-family:monospace; border-bottom:1px solid #1a1a1a; cursor:pointer; }
+  #lap-table tr:hover td { background:#1e1e1e; }
+  .lap-a { color:#ffd700; } .lap-b { color:#00a8ff; }
+  #status { padding:8px 16px; font-size:11px; color:var(--dim); }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>⬡ LAP COMPARISON</h1>
+  <a href="/dashboard">← Live Dashboard</a>
+</div>
+
+<div id="controls">
+  <div>
+    <label>Session</label>
+    <select id="sel-session"></select>
+  </div>
+  <div>
+    <label>Lap A <span class="lap-a">●</span></label>
+    <select id="sel-lap-a"><option>—</option></select>
+  </div>
+  <div>
+    <label>Lap B <span class="lap-b">●</span></label>
+    <select id="sel-lap-b"><option>—</option></select>
+  </div>
+  <button onclick="loadComparison()">Compare</button>
+</div>
+
+<div id="status">Select a session and two laps to compare.</div>
+
+<div id="lap-table-wrap"></div>
+
+<div id="charts">
+  <div class="chart-panel"><div class="chart-title">SPEED (KM/H)</div><canvas id="c-speed" height="120"></canvas></div>
+  <div class="chart-panel"><div class="chart-title">THROTTLE %</div><canvas id="c-throttle" height="80"></canvas></div>
+  <div class="chart-panel"><div class="chart-title">BRAKE %</div><canvas id="c-brake" height="80"></canvas></div>
+  <div class="chart-panel"><div class="chart-title">GEAR</div><canvas id="c-gear" height="60"></canvas></div>
+  <div class="chart-panel"><div class="chart-title">RPM</div><canvas id="c-rpm" height="80"></canvas></div>
+</div>
+
+<script>
+const API = `http://${location.hostname}:8766`;
+let sessions = [], laps = [], framesA = [], framesB = [];
+
+function msToStr(ms) {
+  if (!ms) return '—';
+  const m = Math.floor(ms/60000);
+  const s = ((ms%60000)/1000).toFixed(3).padStart(6,'0');
+  return `${m}:${s}`;
+}
+
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  return r.json();
+}
+
+async function loadSessions() {
+  try {
+    sessions = await fetchJSON(`${API}/api/sessions`);
+    const sel = document.getElementById('sel-session');
+    sel.innerHTML = sessions.map(s =>
+      `<option value="${s.session_uid}">${s.track_name || 'Unknown'} — ${new Date(s.started_at*1000).toLocaleDateString()} (${s.lap_count||0} laps)</option>`
+    ).join('');
+    if (sessions.length) loadLaps(sessions[0].session_uid);
+    sel.onchange = () => loadLaps(sel.value);
+  } catch(e) {
+    document.getElementById('status').textContent = 'Could not reach API. Is the listener running?';
+  }
+}
+
+async function loadLaps(sessionUid) {
+  laps = await fetchJSON(`${API}/api/laps?session_uid=${sessionUid}`);
+
+  // Lap table
+  const wrap = document.getElementById('lap-table-wrap');
+  if (!laps.length) { wrap.innerHTML = '<div style="padding:10px;color:var(--dim)">No laps recorded yet.</div>'; return; }
+
+  wrap.innerHTML = `<table id="lap-table">
+    <thead><tr><th>Lap</th><th>Time</th><th>S1</th><th>S2</th><th>S3</th><th>Tyre</th><th>Age</th><th>Valid</th></tr></thead>
+    <tbody>${laps.map(l=>`
+      <tr onclick="selectLap(${l.lap_num})">
+        <td>${l.lap_num}</td>
+        <td>${msToStr(l.lap_time_ms)}</td>
+        <td>${msToStr(l.s1_ms)}</td>
+        <td>${msToStr(l.s2_ms)}</td>
+        <td>${msToStr(l.s3_ms)}</td>
+        <td>${l.tyre_compound||'—'}</td>
+        <td>${l.tyre_age||0}</td>
+        <td>${l.lap_invalid?'❌':'✓'}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+
+  // Populate dropdowns
+  const opts = laps.map(l => `<option value="${l.lap_num}">Lap ${l.lap_num} — ${msToStr(l.lap_time_ms)}</option>`).join('');
+  document.getElementById('sel-lap-a').innerHTML = opts;
+  document.getElementById('sel-lap-b').innerHTML = opts;
+  if (laps.length >= 2) document.getElementById('sel-lap-b').selectedIndex = 1;
+}
+
+let clickCount = 0;
+function selectLap(lapNum) {
+  if (clickCount % 2 === 0) document.getElementById('sel-lap-a').value = lapNum;
+  else document.getElementById('sel-lap-b').value = lapNum;
+  clickCount++;
+}
+
+async function loadComparison() {
+  const sessionUid = document.getElementById('sel-session').value;
+  const lapA = document.getElementById('sel-lap-a').value;
+  const lapB = document.getElementById('sel-lap-b').value;
+  document.getElementById('status').textContent = 'Loading…';
+  try {
+    [framesA, framesB] = await Promise.all([
+      fetchJSON(`${API}/api/frames?session_uid=${sessionUid}&lap_num=${lapA}`),
+      fetchJSON(`${API}/api/frames?session_uid=${sessionUid}&lap_num=${lapB}`),
+    ]);
+    document.getElementById('status').textContent =
+      `Lap ${lapA}: ${framesA.length} frames   |   Lap ${lapB}: ${framesB.length} frames`;
+    drawCharts();
+  } catch(e) {
+    document.getElementById('status').textContent = 'Error: ' + e.message;
+  }
+}
+
+// ── Charting ──────────────────────────────────────────────────────────────
+function normalise(frames) {
+  if (!frames.length) return {distances:[], data:{}};
+  const maxDist = Math.max(...frames.map(f => f.lap_distance));
+  const step = 5; // 5m resolution
+  const buckets = {};
+  for (let d = 0; d <= maxDist; d += step) {
+    const near = frames.reduce((best, f) => Math.abs(f.lap_distance - d) < Math.abs((best?.lap_distance||1e9) - d) ? f : best, null);
+    if (near) buckets[d] = near;
+  }
+  const distances = Object.keys(buckets).map(Number).sort((a,b)=>a-b);
+  const data = {};
+  ['speed','throttle','brake','gear','engine_rpm'].forEach(k => {
+    data[k] = distances.map(d => buckets[d][k] ?? 0);
+  });
+  return {distances, data};
+}
+
+function drawChart(canvasId, nA, nB, key, {min=0, max=100, color1='#ffd700', color2='#00a8ff', scale=1}={}) {
+  const canvas = document.getElementById(canvasId);
+  const W = canvas.parentElement.offsetWidth - 20;
+  canvas.width = W; canvas.height = parseInt(canvas.getAttribute('height'));
+  const H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  // background grid
+  ctx.strokeStyle = '#1e1e1e'; ctx.lineWidth = 1;
+  for (let y = 0; y <= 4; y++) {
+    const py = H - (y/4)*H;
+    ctx.beginPath(); ctx.moveTo(0,py); ctx.lineTo(W,py); ctx.stroke();
+    ctx.fillStyle = '#444'; ctx.font = '9px monospace';
+    ctx.fillText(((min + (max-min)*(y/4))*scale).toFixed(0), 2, py-2);
+  }
+
+  function drawSeries(norm, color) {
+    if (!norm.distances.length) return;
+    const maxD = norm.distances[norm.distances.length-1];
+    ctx.beginPath();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    norm.distances.forEach((d, i) => {
+      const v = norm.data[key][i];
+      const x = (d / maxD) * W;
+      const y = H - ((v - min) / (max - min)) * H;
+      i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+
+  const nA2 = normalise(framesA);
+  const nB2 = normalise(framesB);
+  drawSeries(nA2, color1);
+  drawSeries(nB2, color2);
+}
+
+function drawCharts() {
+  drawChart('c-speed',   framesA, framesB, 'speed',      {min:0, max:380, color1:'#ffd700', color2:'#00a8ff'});
+  drawChart('c-throttle',framesA, framesB, 'throttle',   {min:0, max:1,   color1:'#39d353', color2:'#00ffc8', scale:100});
+  drawChart('c-brake',   framesA, framesB, 'brake',      {min:0, max:1,   color1:'#e8002d', color2:'#ff6b00', scale:100});
+  drawChart('c-gear',    framesA, framesB, 'gear',       {min:0, max:8,   color1:'#ffd700', color2:'#00a8ff'});
+  drawChart('c-rpm',     framesA, framesB, 'engine_rpm', {min:0, max:18000,color1:'#ffd700', color2:'#00a8ff'});
+}
+
+loadSessions();
+</script>
+</body>
+</html>

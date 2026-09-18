@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>F1 25 Telemetry</title>
+<style>
+  :root {
+    --bg: #080808; --panel: #111; --panel2: #171717; --border: #1e1e1e;
+    --red: #e8002d; --green: #39d353; --yellow: #ffd700;
+    --orange: #ff6b00; --blue: #00a8ff; --white: #efefef;
+    --dim: #888; --dim2: #bbb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--white); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; overflow-x: hidden; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+  /* ── HEADER ── */
+  #header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px; height: 38px;
+    background: var(--panel); border-bottom: 2px solid var(--red);
+  }
+  #header h1 { font-size: 11px; font-weight: 900; letter-spacing: 4px; color: var(--red); }
+  #session-info { display: flex; gap: 20px; font-size: 11px; color: var(--dim2); }
+  #session-info b { color: var(--white); font-weight: 700; }
+  #header-right { display: flex; align-items: center; gap: 8px; }
+  .hdr-btn { font-size: 10px; padding: 3px 10px; border-radius: 2px; font-weight: 800; letter-spacing: 1px; text-decoration: none; cursor: pointer; border: 1px solid; }
+  .hdr-btn-blue  { background: #00101a; color: var(--blue);  border-color: #00355a; }
+  .hdr-btn-green { background: #0a1a0a; color: var(--green); border-color: #183818; }
+  #connection { font-size: 10px; padding: 3px 10px; border-radius: 2px; font-weight: 900; letter-spacing: 1px; border: 1px solid; }
+  #connection.live { background: #0a1a0a; color: var(--green); border-color: #183818; }
+  #connection.dead { background: #1a0a0a; color: #444;         border-color: #2a1414; }
+
+  /* ── SAFETY CAR ── */
+  #sc-banner { display: none; position: fixed; top: 46px; left: 50%; transform: translateX(-50%); background: var(--yellow); color: #000; font-weight: 900; font-size: 13px; letter-spacing: 4px; padding: 5px 24px; border-radius: 2px; z-index: 200; }
+  #sc-banner.show { display: block; }
+
+  /* ── GRID ── */
+  #main {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto auto;
+    gap: 5px;
+    padding: 5px;
+  }
+
+  /* ── PANEL BASE ── */
+  .panel { background: linear-gradient(180deg, #171717, #0f0f0f); border: 1px solid var(--border); border-top-color: #272727; border-radius: 5px; padding: 10px 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.02); }
+  .ptitle {
+    font-size: 9px; font-weight: 900; color: var(--dim); letter-spacing: 2.5px;
+    text-transform: uppercase; margin-bottom: 8px;
+    border-left: 2px solid var(--red); padding-left: 6px; line-height: 1;
+  }
+  .ptitle.blue   { border-left-color: var(--blue); }
+  .ptitle.yellow { border-left-color: var(--yellow); }
+  .ptitle.green  { border-left-color: var(--green); }
+  .ptitle.dim    { border-left-color: var(--dim); }
+  .sep { height: 1px; background: var(--border); margin: 7px 0; }
+
+  /* ════════════════════════════════════════════════
+     ROW 1 — GLANCE STRIP
+     4 equal panels: Speed · Gear · Position · Lap
+     ════════════════════════════════════════════════ */
+  .glance-panel {
+    grid-row: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  #speed-panel { grid-column: 1; border-top: 2px solid var(--red); }
+  #gear-panel  { grid-column: 2; border-top: 2px solid var(--yellow); }
+  #pos-panel   { grid-column: 3; border-top: 2px solid var(--yellow); }
+  #curtime-panel { grid-column: 4; border-top: 2px solid var(--white); }
+
+  .glance-label { font-size: 9px; color: var(--dim); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 4px; }
+  .glance-label.after { margin-bottom: 0; margin-top: 4px; }
+
+  #speed-num { font-size: 88px; font-weight: 900; line-height: 1; color: var(--white); font-variant-numeric: tabular-nums; }
+  #speed-unit { font-size: 10px; color: var(--dim); letter-spacing: 3px; }
+
+  #gear-num { font-size: 80px; font-weight: 900; color: var(--yellow); line-height: 1; font-variant-numeric: tabular-nums; }
+
+  #rpm-strip { width: 100%; margin-top: 8px; }
+  #rpm-bar   { height: 7px; background: #1a1a1a; border-radius: 2px; overflow: hidden; }
+  #rpm-fill  { height: 100%; width: 0%; background: linear-gradient(90deg, #003870, var(--blue), var(--green), var(--yellow), var(--orange), var(--red)); transition: width 0.07s; }
+  #rev-leds  { display: flex; gap: 2px; margin-top: 4px; }
+  .led { flex: 1; height: 5px; border-radius: 1px; background: #1a1a1a; transition: background 0.04s; }
+  .led.active        { background: var(--green); }
+  .led.active.yellow { background: var(--yellow); }
+  .led.active.red    { background: var(--red); box-shadow: 0 0 3px var(--red); }
+
+  #pos-num { font-size: 80px; font-weight: 900; color: var(--yellow); line-height: 1; font-variant-numeric: tabular-nums; }
+  #pos-sub { font-size: 10px; color: var(--dim); letter-spacing: 1px; }
+
+  #cur-lap { font-size: 38px; font-weight: 900; font-family: monospace; color: var(--white); line-height: 1; font-variant-numeric: tabular-nums; }
+  #lap-invalid-badge { font-size: 9px; color: var(--red); letter-spacing: 1px; min-height: 13px; }
+
+  /* Badges (DRS / PIT / SC) — live in gear panel */
+  #badges { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+  .badge { padding: 4px 9px; border-radius: 2px; font-size: 9px; font-weight: 900; letter-spacing: 1px; background: #161616; color: var(--dim); border: 1px solid var(--border); }
+  .badge.on   { background: #0a1f0a; color: var(--green); border-color: #183818; }
+  .badge.warn { background: #1f0d00; color: var(--orange); border-color: #3a1a00; }
+
+  /* ════════════════════════════════════════════════
+     ROW 2 — DETAIL ROW
+     ════════════════════════════════════════════════ */
+
+  /* --- LEFT: Inputs + Tyre wear --- */
+  #inputs-panel { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; }
+
+  .input-row   { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+  .input-label { width: 56px; font-size: 9px; color: var(--dim); letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; }
+  .input-bar   { flex: 1; height: 22px; background: #161616; border-radius: 2px; overflow: hidden; border: 1px solid var(--border); }
+  .input-fill  { height: 100%; width: 0%; transition: width 0.05s; }
+  .thr-fill { background: linear-gradient(90deg, #0a280a, #1a6a1a, var(--green)); }
+  .brk-fill { background: linear-gradient(90deg, #280a0a, #6a1a1a, var(--red)); }
+  .input-val { width: 30px; text-align: right; font-size: 11px; font-weight: 700; color: var(--dim2); font-variant-numeric: tabular-nums; }
+
+  /* Tyre wear bars — key addition that fills the space */
+  #tyre-wear-section { display: flex; flex-direction: column; justify-content: flex-start; margin-top: 12px; }
+  .wear-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+  .wear-label { width: 18px; font-size: 9px; font-weight: 800; color: var(--dim); letter-spacing: 1px; flex-shrink: 0; }
+  .wear-bar-outer { flex: 1; height: 14px; background: #161616; border-radius: 2px; overflow: hidden; border: 1px solid var(--border); }
+  .wear-bar-inner { height: 100%; border-radius: 1px; transition: width 0.3s; }
+  .wear-ok   { background: linear-gradient(90deg, #0a280a, var(--green)); }
+  .wear-mid  { background: linear-gradient(90deg, #282000, var(--yellow)); }
+  .wear-high { background: linear-gradient(90deg, #281200, var(--orange)); }
+  .wear-crit { background: linear-gradient(90deg, #280000, var(--red)); }
+  .wear-val  { width: 34px; text-align: right; font-size: 10px; color: var(--dim2); font-variant-numeric: tabular-nums; }
+
+  /* --- CENTRE: Tyres --- */
+  #tyres-panel { grid-column: 2 / span 2; grid-row: 2; }
+
+  #compound-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  #compound-badge { padding: 6px 14px; border-radius: 3px; font-weight: 900; font-size: 13px; letter-spacing: 2px; border: 1px solid transparent; }
+  .comp-soft,   .comp-c5, .comp-c4 { background: #1f0000; color: #ff5555; border-color: #4a0000; }
+  .comp-medium, .comp-c3           { background: #1f1600; color: var(--yellow); border-color: #4a3800; }
+  .comp-hard,   .comp-c2, .comp-c1, .comp-c0 { background: #1a1a1a; color: #ccc; border-color: #303030; }
+  .comp-inter { background: #001a00; color: var(--green); border-color: #003a00; }
+  .comp-wet   { background: #00101f; color: var(--blue); border-color: #00304a; }
+  #tyre-age-lbl { font-size: 10px; color: var(--dim); letter-spacing: 1px; }
+  #tyre-age-lbl b { color: var(--dim2); }
+
+  /* F1 car image tyre viz — exact copy of car_preview, scaled to fit */
+  #car-img-wrap { display: flex; justify-content: center; width: 100%; overflow: hidden; }
+  .car-wrap-inner { position: relative; width: 520px; height: 720px; transform: scale(1.3); transform-origin: top center; margin-top: -180px; margin-bottom: 80px; flex-shrink: 0; }
+  .car-wrap-inner img { width: 100%; height: 100%; object-fit: contain; transform: rotate(90deg); display: block; }
+  .tyre { position: absolute; width: 72px; display: flex; flex-direction: column; align-items: center; gap: 1px; background: rgba(0,0,0,0.55); border: 4px solid #333; border-radius: 6px; padding: 4px 6px; transition: border-color 0.4s, box-shadow 0.4s; }
+  .tyre.wear-ok   { border-color: #39d353; box-shadow: 0 0 8px rgba(57,211,83,0.4); }
+  .tyre.wear-mid  { border-color: #ffd700; box-shadow: 0 0 8px rgba(255,215,0,0.4); }
+  .tyre.wear-high { border-color: #ff6b00; box-shadow: 0 0 8px rgba(255,107,0,0.4); }
+  .tyre.wear-crit { border-color: #e8002d; box-shadow: 0 0 8px rgba(232,0,45,0.4); }
+  .tyre-label { font-family: monospace; font-size: 11px; font-weight: 900; letter-spacing: 1px; color: #ccc; }
+  .tyre-temp  { font-family: monospace; font-size: 26px; font-weight: 900; line-height: 1; }
+  .tyre-unit  { font-family: monospace; font-size: 9px; color: #aaa; }
+  .tyre-wear  { font-family: monospace; font-size: 14px; font-weight: 700; }
+  .tyre-psi   { font-family: monospace; font-size: 9px; color: #aaa; }
+  .tyre-FL { top: 220px; left: 91px; }
+  .tyre-FR { top: 220px; left: 367px; }
+  .tyre-RL { top: 465px; left: 91px; }
+  .tyre-RR { top: 465px; left: 367px; }
+
+  #brake-temps-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; font-size: 10px; color: var(--dim); padding-top: 6px; border-top: 1px solid var(--border); margin-top: 4px; }
+  #brake-temps-grid b { font-weight: 700; }
+
+  /* --- RIGHT: Lap detail + Fuel + Damage --- */
+  #right-panel { grid-column: 4; grid-row: 2; display: flex; flex-direction: column; }
+
+  .lap-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .lap-k   { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+  .lap-v   { font-size: 11px; font-family: monospace; color: var(--dim2); font-variant-numeric: tabular-nums; }
+  .lap-v.hl { color: var(--white); }
+  .lap-v.sec-hl { color: var(--yellow); font-weight: 800; }
+  .delta { font-weight: 800; }
+  .delta-pos { color: var(--green); }
+  .delta-neg { color: var(--red); }
+
+  .gauge-wrap  { margin-bottom: 7px; }
+  .gauge-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--dim); margin-bottom: 2px; }
+  .gauge-label b { color: var(--white); font-weight: 600; }
+  .gauge-bar   { height: 10px; background: #161616; border-radius: 2px; overflow: hidden; border: 1px solid var(--border); }
+  .gauge-fill  { height: 100%; border-radius: 1px; transition: width 0.2s; }
+  .fuel-fill   { background: linear-gradient(90deg, #3a0f00, var(--orange), var(--yellow), var(--green)); }
+  .ers-fill    { background: linear-gradient(90deg, #002540, var(--blue), #00ffc8); }
+
+  /* Damage compact 2-col grid */
+  #dmg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; }
+  .dmg-item { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; border-bottom: 1px solid #161616; }
+  .dmg-k    { font-size: 9px; color: var(--dim); letter-spacing: 0.5px; text-transform: uppercase; }
+  .dmg-v    { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dv-ok    { color: var(--dim); }
+  .dv-med   { color: var(--yellow); }
+  .dv-high  { color: var(--orange); }
+  .dv-crit  { color: var(--red); }
+
+  /* ════════════════════════════════════════════════
+     ROW 3 — DELTA TRACE
+     ════════════════════════════════════════════════ */
+  #map-panel    { display: none; }
+  #delta-panel  { display: none; }
+  #delta-big { font-size: 64px; font-weight: 900; font-family: monospace; font-variant-numeric: tabular-nums; color: var(--dim2); line-height: 1; letter-spacing: 2px; }
+  #delta-big.pos { color: #ff5555; }
+  #delta-big.neg { color: #39d353; }
+  #mini-sectors { display: flex; gap: 6px; margin: 6px 0; }
+  .ms-group { display: flex; gap: 3px; flex: 1; }
+  .ms-block { flex: 1; height: 18px; border-radius: 2px; background: #222; transition: background 0.2s; }
+  .ms-block.ms-green  { background: #39d353; box-shadow: 0 0 5px rgba(57,211,83,0.35); }
+  .ms-block.ms-yellow { background: #ffd700; box-shadow: 0 0 5px rgba(255,215,0,0.30); }
+  .ms-block.ms-purple { background: #bf00ff; box-shadow: 0 0 7px rgba(191,0,255,0.55); }
+  .ms-block.ms-dim    { background: #333; }
+  .ms-block.ms-flash  { animation: msFlash 0.6s ease-out; }
+  @keyframes msFlash {
+    0%   { box-shadow: 0 0 12px 3px rgba(191,0,255,0.95); transform: scaleY(1.5); }
+    100% { box-shadow: 0 0 7px 0 rgba(191,0,255,0.55); transform: scaleY(1); }
+  }
+
+  /* ════════════════════════════════════════════════
+     ROW 3/4 — MAP / LEADERBOARD / EVENTS
+     ════════════════════════════════════════════════ */
+  #leader-panel { grid-column: 2 / span 2; grid-row: 3; }
+  #events-panel { grid-column: 2 / span 2; grid-row: 4; }
+
+  #track-canvas { width: 100%; height: 170px; display: block; background: #0a0a0a; border-radius: 2px; }
+
+  .lb-row  { display: flex; gap: 6px; padding: 3px 0; border-bottom: 1px solid #161616; align-items: center; }
+  .lb-pos  { width: 16px; font-size: 10px; font-weight: 900; color: var(--dim); }
+  .lb-name { flex: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim2); }
+  .lb-self { color: var(--yellow) !important; font-weight: 800; }
+
+  #events-list { overflow-y: auto; max-height: 160px; }
+  .ev-item   { font-size: 10px; padding: 3px 0; border-bottom: 1px solid #161616; }
+  .ev-time   { color: var(--dim); font-family: monospace; }
+  .ev-name   { color: var(--blue); font-weight: 700; }
+  .ev-detail { color: var(--dim); font-size: 9px; margin-top: 1px; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>F1 25 TELEMETRY</h1>
+  <div id="session-info">
+    <span><b id="hdr-track">—</b></span>
+    <span id="hdr-weather"></span>
+    <span id="hdr-laps"></span>
+  </div>
+  <div id="header-right">
+    <a href="/sessions" class="hdr-btn hdr-btn-blue">SESSIONS</a>
+    <button onclick="exportAI()" class="hdr-btn hdr-btn-green">EXPORT AI</button>
+    <div id="connection" class="dead">NO SIGNAL</div>
+  </div>
+</div>
+
+<div id="sc-banner">SAFETY CAR</div>
+
+<div id="main">
+
+  <!-- ── ROW 1: GLANCE STRIP ── -->
+
+  <div id="speed-panel" class="panel glance-panel">
+    <div class="glance-label">SPEED</div>
+    <div id="speed-num">0</div>
+    <div id="speed-unit">KM / H</div>
+    <div id="rpm-strip">
+      <div id="rpm-bar"><div id="rpm-fill"></div></div>
+      <div id="rev-leds"></div>
+    </div>
+  </div>
+
+  <div id="gear-panel" class="panel glance-panel">
+    <div class="glance-label">GEAR</div>
+    <div id="gear-num">N</div>
+    <div id="badges">
+      <div class="badge" id="drs-badge">AERO</div>
+      <div class="badge" id="pit-badge">ON TRACK</div>
+      <div class="badge" id="sc-badge">SC CLEAR</div>
+    </div>
+  </div>
+
+  <div id="pos-panel" class="panel glance-panel">
+    <div class="glance-label">POSITION</div>
+    <div id="pos-num">—</div>
+    <div id="pos-sub">LAP <span id="cur-lapnum">—</span></div>
+  </div>
+
+  <div id="curtime-panel" class="panel glance-panel">
+    <div class="glance-label">CURRENT LAP</div>
+    <div id="cur-lap">0:00.000</div>
+    <div id="lap-invalid-badge"></div>
+    <div class="glance-label after" id="engine-row">ENG <b id="eng-temp" style="color:var(--dim2)">—</b>°C &nbsp; MIX <b id="fuel-mix" style="color:var(--dim2)">—</b></div>
+  </div>
+
+  <!-- ── ROW 2: DETAIL ROW ── -->
+
+  <!-- LEFT: Inputs + Tyre wear -->
+  <div id="inputs-panel" class="panel">
+    <div class="ptitle">INPUTS</div>
+    <div class="input-row">
+      <span class="input-label">Throttle</span>
+      <div class="input-bar"><div class="input-fill thr-fill" id="thr-fill"></div></div>
+      <span class="input-val" id="thr-val">0%</span>
+    </div>
+    <div class="input-row">
+      <span class="input-label">Brake</span>
+      <div class="input-bar"><div class="input-fill brk-fill" id="brk-fill"></div></div>
+      <span class="input-val" id="brk-val">0%</span>
+    </div>
+    <div class="sep"></div>
+
+    <div id="tyre-wear-section">
+      <div class="sep"></div>
+      <div class="ptitle blue" style="margin-bottom:6px;">FUEL &amp; ERS</div>
+      <div class="gauge-wrap">
+        <div class="gauge-label"><span>FUEL</span><span><b id="fuel-val">--</b> kg <span style="color:var(--dim)" id="fuel-laps"></span></span></div>
+        <div class="gauge-bar"><div class="gauge-fill fuel-fill" id="fuel-fill"></div></div>
+      </div>
+      <div class="gauge-wrap">
+        <div class="gauge-label"><span>ERS</span><span><b id="ers-val">--%</b> &nbsp;<span style="color:var(--dim)">MODE <b id="ers-mode">—</b></span></span></div>
+        <div class="gauge-bar"><div class="gauge-fill ers-fill" id="ers-fill"></div></div>
+      </div>
+      <div class="sep"></div>
+      <div class="ptitle dim">TRACK MAP</div>
+      <canvas id="track-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- CENTRE: Tyres -->
+  <div id="tyres-panel" class="panel">
+    <div class="ptitle yellow">TYRES</div>
+    <div id="compound-row">
+      <div id="compound-badge" class="comp-soft">—</div>
+      <div id="tyre-age-lbl">Age <b id="tyre-age">0</b> laps</div>
+    </div>
+    <div id="car-img-wrap">
+      <div class="car-wrap-inner">
+        <img src="f1_car.png" alt="F1 car top view">
+        <div class="tyre tyre-FL" id="svg-tyre-FL">
+          <span class="tyre-temp" id="svg-ts-FL">—</span>
+          <span class="tyre-unit">°C surf</span>
+          <span class="tyre-wear" id="svg-tw-FL">—%</span>
+          <span class="tyre-psi" id="svg-ti-FL">— PSI</span>
+        </div>
+        <div class="tyre tyre-FR" id="svg-tyre-FR">
+          <span class="tyre-temp" id="svg-ts-FR">—</span>
+          <span class="tyre-unit">°C surf</span>
+          <span class="tyre-wear" id="svg-tw-FR">—%</span>
+          <span class="tyre-psi" id="svg-ti-FR">— PSI</span>
+        </div>
+        <div class="tyre tyre-RL" id="svg-tyre-RL">
+          <span class="tyre-temp" id="svg-ts-RL">—</span>
+          <span class="tyre-unit">°C surf</span>
+          <span class="tyre-wear" id="svg-tw-RL">—%</span>
+          <span class="tyre-psi" id="svg-ti-RL">— PSI</span>
+        </div>
+        <div class="tyre tyre-RR" id="svg-tyre-RR">
+          <span class="tyre-temp" id="svg-ts-RR">—</span>
+          <span class="tyre-unit">°C surf</span>
+          <span class="tyre-wear" id="svg-tw-RR">—%</span>
+          <span class="tyre-psi" id="svg-ti-RR">— PSI</span>
+        </div>
+      </div>
+    </div>
+    <div id="brake-temps-grid">
+      <span>FL <b id="bt-FL">—</b></span>
+      <span>FR <b id="bt-FR">—</b></span>
+      <span>RL <b id="bt-RL">—</b></span>
+      <span>RR <b id="bt-RR">—</b></span>
+    </div>
+  </div>
+
+  <!-- RIGHT: Lap detail + Damage -->
+  <div id="right-panel" class="panel">
+    <div class="ptitle">LAP TIMES</div>
+    <div class="lap-row"><span class="lap-k">Last</span>  <span class="lap-v hl" id="last-lap">—</span></div>
+    <div class="lap-row"><span class="lap-k">Best</span>  <span class="lap-v hl" id="best-lap">—</span></div>
+    <div class="sep"></div>
+    <div class="lap-row"><span class="lap-k">Sector</span><span class="lap-v sec-hl" id="cur-sector">—</span></div>
+    <div class="lap-row"><span class="lap-k">S1</span>    <span class="lap-v" id="s1">—</span></div>
+    <div class="lap-row"><span class="lap-k">S2</span>    <span class="lap-v" id="s2">—</span></div>
+    <div class="lap-row"><span class="lap-k">Pits</span>  <span class="lap-v" id="pit-stops">0</span></div>
+    <div class="lap-row"><span class="lap-k">Penalty</span><span class="lap-v" id="penalties">0s</span></div>
+    <div class="sep"></div>
+    <div class="ptitle dim">DAMAGE</div>
+    <div id="dmg-grid"></div>
+    <div class="sep"></div>
+    <div class="ptitle">MINI SECTORS</div>
+    <div id="mini-sectors">
+      <div class="ms-group" id="ms-s1"></div>
+      <div class="ms-group" id="ms-s2"></div>
+      <div class="ms-group" id="ms-s3"></div>
+    </div>
+    <div class="sep"></div>
+    <div class="ptitle">LAP DELTA</div>
+    <div id="delta-big">—</div>
+  </div>
+
+  <!-- hidden shells kept so JS refs don't break -->
+  <div id="delta-panel"></div>
+
+  <div id="map-panel">
+    <div class="ptitle">TRACK MAP</div>
+    <canvas id="track-canvas"></canvas>
+  </div>
+
+  <div id="leader-panel" class="panel">
+    <div class="ptitle">LEADERBOARD</div>
+    <div id="leaderboard"></div>
+  </div>
+
+  <div id="events-panel" class="panel">
+    <div class="ptitle blue">EVENTS</div>
+    <div id="events-list"></div>
+  </div>
+
+</div>
+
+<script>
+const WS_URL = `ws://${location.hostname}:8765`;
+let ws = null, reconnectTimer = null;
+let currentSessionUid = 0, currentTrackKey = '', playerIdx = 0;
+let mapPoints = [], mapBounds = {minX:0,maxX:0,minZ:0,maxZ:0};
+let allCarPositions = [], mapReady = false;
+
+const ERS_MODES = ['None','Medium','Hotlap','Overtake'];
+const FUEL_MIX  = ['Lean','Standard','Rich','Max'];
+const SC_STATUS = ['Clear','Safety Car','VSC','Formation'];
+const TYRE_IDX  = {FL:2, FR:3, RL:0, RR:1};
+const TYRE_RANGES = {
+  default:[60,80,105,120], C5:[60,75,100,115], Soft:[60,75,100,115],
+  Medium:[65,80,105,120], Hard:[70,85,110,125], Inter:[40,60,90,110], Wet:[30,50,80,100],
+};
+
+function tempCardClass(t, cmp) {
+  const r = TYRE_RANGES[cmp] || TYRE_RANGES.default;
+  if (t <= 0 || t < r[1]) return 'tcold';
+  if (t <= r[2]) return 'topt';
+  if (t <= r[3]) return 'twarm';
+  return 'thot';
+}
+function wearClass(pct) {
+  if (pct < 25) return 'wear-ok';
+  if (pct < 55) return 'wear-mid';
+  if (pct < 80) return 'wear-high';
+  return 'wear-crit';
+}
+const TYRE_STATES = {
+  tcold: {fill:'#05090f', stroke:'#0a1828', color:'#4488ff'},
+  topt:  {fill:'#050f06', stroke:'#0a2010', color:'#39d353'},
+  twarm: {fill:'#0f0d00', stroke:'#282000', color:'#ffd700'},
+  thot:  {fill:'#0f0303', stroke:'#2a0606', color:'#ff5555'},
+};
+function wearColor(pct) {
+  if (pct < 25) return '#39d353';
+  if (pct < 55) return '#ffd700';
+  if (pct < 80) return '#ff6b00';
+  return '#e8002d';
+}
+function setSvgAttr(id, attr, val) { const e=document.getElementById(id); if(!e) return; if(e instanceof SVGElement) e.setAttribute(attr,val); else if(attr==='fill') e.style.color=val; }
+function setSvgText(id, val) { const e=document.getElementById(id); if(e) e.textContent=val; }
+function dmgValClass(v) {
+  if (v < 5)  return 'dv-ok';
+  if (v < 40) return 'dv-med';
+  if (v < 70) return 'dv-high';
+  return 'dv-crit';
+}
+function msToStr(ms) {
+  if (!ms) return '—:——.———';
+  const m = Math.floor(ms/60000);
+  return `${m}:${((ms%60000)/1000).toFixed(3).padStart(6,'0')}`;
+}
+function setEl(id, v) { const e=document.getElementById(id); if(e) e.textContent=v; }
+function setW(id, pct) { const e=document.getElementById(id); if(e) e.style.width=Math.min(100,Math.max(0,pct))+'%'; }
+
+// Rev lights
+const ledWrap = document.getElementById('rev-leds');
+for (let i=0;i<15;i++) { const d=document.createElement('div'); d.className='led'; d.id=`led-${i}`; ledWrap.appendChild(d); }
+function updateRevLights(pct) {
+  const n = Math.round(pct/100*15);
+  for (let i=0;i<15;i++) document.getElementById(`led-${i}`).className = i<n ? 'led active'+(i<8?'':i<12?' yellow':' red') : 'led';
+}
+
+// Damage compact grid
+const dmgItems = [
+  ['FL Wing','fl_wing'],['FR Wing','fr_wing'],['Rear Wing','rear_wing'],
+  ['Floor','floor'],['Diffuser','diffuser'],['Gearbox','gearbox'],['Engine','engine'],
+];
+document.getElementById('dmg-grid').innerHTML = dmgItems.map(([lbl,k])=>
+  `<div class="dmg-item"><span class="dmg-k">${lbl}</span><span class="dmg-v" id="dmg-${k}">0%</span></div>`
+).join('');
+function updateDamage(d) {
+  dmgItems.forEach(([,k]) => {
+    const v = d[k]||0;
+    const e = document.getElementById(`dmg-${k}`);
+    if (e) { e.textContent=v+'%'; e.className='dmg-v '+dmgValClass(v); }
+  });
+  ['FL','FR','RL','RR'].forEach(c => {
+    const i = TYRE_IDX[c], w = (d.tyre_wear[i]||0);
+    const bar = document.getElementById(`wbar-${c}`);
+    const val = document.getElementById(`wval-${c}`);
+    if (bar) { bar.style.width=w+'%'; bar.className='wear-bar-inner '+wearClass(w); }
+    if (val) val.textContent = w.toFixed(1)+'%';
+  });
+}
+
+// Track map
+const mapCanvas = document.getElementById('track-canvas');
+const mapCtx = mapCanvas.getContext('2d');
+function updateMap(pos, lb) {
+  allCarPositions = lb.map(c=>({x:c.world_x,z:c.world_z,self:c.car_idx===playerIdx}));
+  if (pos.x!==0||pos.z!==0) {
+    const last=[...mapPoints].reverse().find(p=>p!==null);
+    const dist=last?Math.hypot(pos.x-last.x,pos.z-last.z):0;
+    if (!last)       mapPoints.push({x:pos.x,z:pos.z});
+    else if(dist>100) mapPoints.push(null,{x:pos.x,z:pos.z});
+    else if(dist>2)   mapPoints.push({x:pos.x,z:pos.z});
+    if(mapPoints.length>12000) mapPoints.shift();
+    mapBounds.minX=Math.min(mapBounds.minX,pos.x); mapBounds.maxX=Math.max(mapBounds.maxX,pos.x);
+    mapBounds.minZ=Math.min(mapBounds.minZ,pos.z); mapBounds.maxZ=Math.max(mapBounds.maxZ,pos.z);
+    mapReady=mapPoints.filter(p=>p!==null).length>100;
+  }
+  drawMap();
+}
+function drawMap() {
+  const W=mapCanvas.offsetWidth||400, H=mapCanvas.offsetHeight||170;
+  mapCanvas.width=W; mapCanvas.height=H; mapCtx.clearRect(0,0,W,H);
+  if (!mapReady) { mapCtx.fillStyle='#2a2a2a'; mapCtx.font='11px Segoe UI'; mapCtx.textAlign='center'; mapCtx.fillText('Drive a lap to build track map',W/2,H/2); return; }
+  const pad=18, rX=mapBounds.maxX-mapBounds.minX||1, rZ=mapBounds.maxZ-mapBounds.minZ||1;
+  const scl=Math.min((W-pad*2)/rX,(H-pad*2)/rZ);
+  const ox=(W-rX*scl)/2, oz=(H-rZ*scl)/2;
+  const toS=(x,z)=>[ox+(x-mapBounds.minX)*scl,oz+(z-mapBounds.minZ)*scl];
+  const path=()=>{ let mv=true; mapPoints.forEach(p=>{ if(!p){mv=true;return;} const[sx,sz]=toS(p.x,p.z); mv?(mapCtx.moveTo(sx,sz),mv=false):mapCtx.lineTo(sx,sz); }); };
+  mapCtx.strokeStyle='#1c1c1c'; mapCtx.lineWidth=9; mapCtx.lineCap='round'; mapCtx.beginPath(); path(); mapCtx.stroke();
+  mapCtx.strokeStyle='#343434'; mapCtx.lineWidth=5; mapCtx.beginPath(); path(); mapCtx.stroke();
+  allCarPositions.forEach(c=>{ if(!c.x&&!c.z) return; const[sx,sz]=toS(c.x,c.z); mapCtx.beginPath(); mapCtx.arc(sx,sz,c.self?5:3,0,Math.PI*2); mapCtx.fillStyle=c.self?'#ffd700':'#555'; mapCtx.fill(); if(c.self){mapCtx.strokeStyle='#fff';mapCtx.lineWidth=1;mapCtx.stroke();} });
+}
+
+function updateLeaderboard(lb) {
+  document.getElementById('leaderboard').innerHTML=[...lb].sort((a,b)=>a.position-b.position).map(c=>
+    `<div class="lb-row"><span class="lb-pos">${c.position}</span><span class="lb-name ${c.car_idx===playerIdx?'lb-self':''}">${c.name||`Car ${c.car_idx+1}`}</span></div>`
+  ).join('');
+}
+function updateEvents(evs) {
+  document.getElementById('events-list').innerHTML=[...evs].reverse().map(e=>{
+    const t=e.time?e.time.toFixed(1):'—';
+    const d=e.details&&Object.keys(e.details).length?Object.entries(e.details).map(([k,v])=>`${k}=${typeof v==='number'?v.toFixed(2):v}`).join(' '):'';
+    return `<div class="ev-item"><span class="ev-time">${t}s</span> <span class="ev-name">${e.name}</span>${d?`<div class="ev-detail">${d}</div>`:''}</div>`;
+  }).join('');
+}
+
+// ── Delta trace ──────────────────────────────────────────────────────────────
+const dtCanvas = document.getElementById('delta-canvas');
+const dtCtx    = dtCanvas ? dtCanvas.getContext('2d') : null;
+let bestLapRef=[], fetchedLapNum=0, deltaTrail=[], trackedLapNum=0, lastDeltaDisplay=0;
+// mini sectors: MS_COUNT per sector × 3 sectors = MS_TOTAL blocks
+const MS_COUNT = 10; // per sector — change this one number to add/remove mini sectors
+const MS_TOTAL = MS_COUNT * 3;
+let msResults  = new Array(MS_TOTAL).fill(null);
+let msBests    = new Array(MS_TOTAL).fill(Infinity);
+let msEntryMs  = new Array(MS_TOTAL).fill(null);
+let msLastDist = -1;
+// build the mini-sector blocks to match MS_COUNT (ids ms-0 .. ms-(MS_TOTAL-1))
+(function buildMiniSectors(){
+  let idx=0;
+  for(const gid of ['ms-s1','ms-s2','ms-s3']){
+    const g=document.getElementById(gid);
+    if(!g) continue;
+    for(let k=0;k<MS_COUNT;k++){ const d=document.createElement('div'); d.className='ms-block'; d.id='ms-'+idx++; g.appendChild(d); }
+  }
+})();
+let sector2dist=0, sector3dist=0, trackLen=0;
+
+async function fetchBestLapRef(uid, lapNum) {
+  try {
+    const url = `http://${location.hostname}:8766/api/frames?session_uid=${uid}&lap_num=${lapNum}`;
+    console.log('[delta] fetching best lap ref:', url);
+    const r = await fetch(url);
+    const frames = await r.json();
+    console.log('[delta] frames returned:', frames.length);
+    if (!frames||frames.length<10) { console.warn('[delta] not enough frames:', frames.length); return; }
+    bestLapRef = frames.map(f=>({dist:f.lap_distance,elapsed_ms:f.lap_time_ms})).sort((a,b)=>a.dist-b.dist);
+    fetchedLapNum = lapNum;
+    console.log('[delta] bestLapRef loaded, points:', bestLapRef.length);
+  } catch(e) { console.error('[delta] fetch error:', e); }
+}
+function interpRef(dist) {
+  if (bestLapRef.length<2) return null;
+  if (dist<=bestLapRef[0].dist) return bestLapRef[0].elapsed_ms;
+  if (dist>=bestLapRef[bestLapRef.length-1].dist) return bestLapRef[bestLapRef.length-1].elapsed_ms;
+  let lo=0,hi=bestLapRef.length-1;
+  while(hi-lo>1){const m=(lo+hi)>>1; bestLapRef[m].dist<=dist?lo=m:hi=m;}
+  const a=bestLapRef[lo],b=bestLapRef[hi],t=(dist-a.dist)/(b.dist-a.dist);
+  return a.elapsed_ms+t*(b.elapsed_ms-a.elapsed_ms);
+}
+function drawDelta() {
+  if (!dtCanvas || !dtCtx) return;
+  const W=dtCanvas.offsetWidth||800, H=dtCanvas.offsetHeight||100;
+  dtCanvas.width=W; dtCanvas.height=H; dtCtx.clearRect(0,0,W,H);
+  if (deltaTrail.length<2||!trackLen) {
+    dtCtx.fillStyle='#252525'; dtCtx.font='11px Segoe UI'; dtCtx.textAlign='center';
+    dtCtx.fillText(bestLapRef.length<2?'Complete a lap to enable delta trace':'Drive to build delta…',W/2,H/2);
+    return;
+  }
+  const maxMs=3000, cy=H/2, scl=(H/2-12)/maxMs;
+  // Guide lines
+  dtCtx.setLineDash([4,4]); dtCtx.lineWidth=1;
+  [1000,2000].forEach(ms=>{
+    const ya=cy-ms*scl, yb=cy+ms*scl;
+    dtCtx.strokeStyle='#1e1e1e';
+    dtCtx.beginPath(); dtCtx.moveTo(0,ya); dtCtx.lineTo(W,ya); dtCtx.stroke();
+    dtCtx.beginPath(); dtCtx.moveTo(0,yb); dtCtx.lineTo(W,yb); dtCtx.stroke();
+    dtCtx.fillStyle='#282828'; dtCtx.font='9px monospace'; dtCtx.textAlign='left';
+    dtCtx.fillText('+'+(ms/1000)+'s',2,ya-2);
+    dtCtx.fillText('-'+(ms/1000)+'s',2,yb+9);
+  });
+  dtCtx.setLineDash([]);
+  // Zero line
+  dtCtx.strokeStyle='#2a2a2a'; dtCtx.lineWidth=1;
+  dtCtx.beginPath(); dtCtx.moveTo(0,cy); dtCtx.lineTo(W,cy); dtCtx.stroke();
+  // Sector dividers
+  [sector2dist,sector3dist].filter(d=>d>0).forEach(d=>{
+    const x=d/trackLen*W;
+    dtCtx.strokeStyle='#222'; dtCtx.lineWidth=1; dtCtx.setLineDash([3,5]);
+    dtCtx.beginPath(); dtCtx.moveTo(x,0); dtCtx.lineTo(x,H); dtCtx.stroke();
+    dtCtx.setLineDash([]);
+  });
+  // Delta line
+  for (let i=1;i<deltaTrail.length;i++) {
+    const a=deltaTrail[i-1],b=deltaTrail[i];
+    const x1=a.dist/trackLen*W, x2=b.dist/trackLen*W;
+    const y1=cy-Math.max(-maxMs,Math.min(maxMs,a.delta))*scl;
+    const y2=cy-Math.max(-maxMs,Math.min(maxMs,b.delta))*scl;
+    dtCtx.strokeStyle=b.delta<=0?'#39d353':'#e8002d'; dtCtx.lineWidth=2;
+    dtCtx.beginPath(); dtCtx.moveTo(x1,y1); dtCtx.lineTo(x2,y2); dtCtx.stroke();
+  }
+  // Current position + readout
+  const last=deltaTrail[deltaTrail.length-1];
+  const lx=last.dist/trackLen*W;
+  dtCtx.strokeStyle='rgba(255,255,255,0.25)'; dtCtx.lineWidth=1; dtCtx.setLineDash([2,3]);
+  dtCtx.beginPath(); dtCtx.moveTo(lx,0); dtCtx.lineTo(lx,H); dtCtx.stroke();
+  dtCtx.setLineDash([]);
+  const sign=last.delta>0?'+':'';
+  dtCtx.fillStyle=last.delta<=0?'#39d353':'#e8002d';
+  dtCtx.font='bold 13px monospace'; dtCtx.textAlign='right';
+  dtCtx.fillText(sign+(last.delta/1000).toFixed(3)+'s',W-4,H-4);
+}
+
+// ── Main update ──────────────────────────────────────────────────────────────
+function exportSession() { window.location.href=`http://${location.hostname}:8766/api/export?session_uid=${currentSessionUid||0}`; }
+function exportAI() { window.location.href=`http://${location.hostname}:8766/api/ai_export?session_uid=${currentSessionUid||0}`; }
+
+function getMSBoundaries() {
+  // track_length from server is sometimes 0; fall back to best lap's final distance
+  const tLen = trackLen || (bestLapRef.length>1 ? bestLapRef[bestLapRef.length-1].dist : 0);
+  if(!tLen||!sector2dist||!sector3dist) return null;
+  const bounds = [];
+  const s1end=sector2dist, s2end=sector3dist, s3end=tLen;
+  const s1len=s1end, s2len=s2end-s1end, s3len=s3end-s2end;
+  for(let i=1;i<=MS_COUNT;i++) bounds.push(s1len*i/MS_COUNT);
+  for(let i=1;i<=MS_COUNT;i++) bounds.push(s1end+s2len*i/MS_COUNT);
+  for(let i=1;i<=MS_COUNT;i++) bounds.push(s2end+s3len*i/MS_COUNT);
+  return bounds; // 9 distances, last one = trackLen
+}
+
+function updateMiniSectors(dist, currentMs) {
+  if(!currentMs||dist<=0){ msLastDist=dist; return; }
+  const bounds = getMSBoundaries();
+  if(!bounds){ msLastDist=dist; return; }
+  // flashback: distance rewound more than 50m — reset segments past new position
+  if(msLastDist>0 && dist < msLastDist - 50){
+    for(let i=0;i<MS_TOTAL;i++){
+      const entryDist = i===0 ? 0 : bounds[i-1];
+      if(entryDist >= dist){ msResults[i]=null; msEntryMs[i]=null; }
+    }
+    msLastDist=dist;
+    renderMiniSectors();
+  }
+  // always update msLastDist so boundary crossing detection stays accurate
+  // even before bestLapRef is loaded
+  for(let i=0;i<MS_TOTAL;i++){
+    const entryDist = i===0 ? 0 : bounds[i-1];
+    if(msEntryMs[i]===null && dist>=entryDist && msLastDist<entryDist){
+      msEntryMs[i] = currentMs;
+    }
+    if(msResults[i]===null && msEntryMs[i]!==null && dist>=bounds[i] && msLastDist<bounds[i]){
+      if(!bestLapRef.length){ msLastDist=dist; return; } // no reference yet, skip scoring
+      const segTime    = currentMs - msEntryMs[i];
+      const refStart   = i===0 ? 0 : (interpRef(entryDist)||0);
+      const refEnd     = interpRef(bounds[i]);
+      if(refEnd===null) continue;
+      const refSegTime = refEnd - refStart;
+      if(segTime < msBests[i]){ msBests[i]=segTime; msResults[i]='purple'; }
+      else if(segTime < refSegTime) msResults[i]='green';
+      else                          msResults[i]='yellow';
+    }
+  }
+  msLastDist=dist;
+  renderMiniSectors();
+}
+
+function renderMiniSectors() {
+  for(let i=0;i<MS_TOTAL;i++){
+    const el=document.getElementById('ms-'+i);
+    if(!el) continue;
+    const cls='ms-block'+(msResults[i]?' ms-'+msResults[i]:'');
+    if(el.className===cls) continue; // no change — skip (also avoids restarting the flash every frame)
+    const newPurple = msResults[i]==='purple' && !el.classList.contains('ms-purple');
+    el.className=cls;
+    if(newPurple){ void el.offsetWidth; el.classList.add('ms-flash'); } // one-shot pulse when a segment goes purple
+  }
+}
+
+function resetSession(){
+  // delta / mini-sector state
+  bestLapRef=[]; fetchedLapNum=0; deltaTrail=[]; trackedLapNum=0;
+  msBests=new Array(MS_TOTAL).fill(Infinity); msResults=new Array(MS_TOTAL).fill(null);
+  msEntryMs=new Array(MS_TOTAL).fill(null); msEntryMs[0]=0; msLastDist=0;
+  // track geometry so mini-sector boundaries recompute for the new track
+  trackLen=0; sector2dist=0; sector3dist=0;
+  // track map — clear the old track's outline and bounds
+  mapPoints=[]; mapBounds={minX:0,maxX:0,minZ:0,maxZ:0}; mapReady=false; allCarPositions=[];
+  renderMiniSectors(); drawMap();
+}
+
+function applyState(d) {
+  const s=d.session, c=d.car, l=d.lap, st=d.status, dmg=d.damage;
+  playerIdx=d.leaderboard.find(x=>x.position===l.position)?.car_idx??playerIdx;
+  const newUid=s?.uid??currentSessionUid;
+  const newTrack=s?.track||'';
+  // A new session = a new UID, OR the track changed (online lobbies don't always hand us a fresh UID)
+  const uidChanged   = newUid && newUid!==currentSessionUid;
+  const trackChanged = newTrack && currentTrackKey && newTrack!==currentTrackKey;
+  if(uidChanged || trackChanged) resetSession();
+  currentSessionUid=newUid;
+  if(newTrack) currentTrackKey=newTrack;
+
+  // Header
+  setEl('hdr-track', s.track||'—');
+  document.getElementById('hdr-weather').textContent=s.weather||'';
+  document.getElementById('hdr-laps').textContent=s.total_laps?`Lap ${l.num} / ${s.total_laps}`:'';
+
+  // Safety car
+  const scEl=document.getElementById('sc-banner');
+  if(s.safety_car===1){scEl.textContent='SAFETY CAR';scEl.classList.add('show');}
+  else if(s.safety_car===2){scEl.textContent='VIRTUAL SC';scEl.classList.add('show');}
+  else scEl.classList.remove('show');
+
+  // Row 1 — glance
+  setEl('speed-num', c.speed);
+  setW('rpm-fill', c.rpm/18000*100);
+  updateRevLights(c.rev_pct||0);
+  setEl('gear-num', c.gear===0?'N':c.gear===-1?'R':c.gear);
+  setEl('pos-num', l.position||'—');
+  setEl('cur-lapnum', `${l.num}/${s.total_laps||'?'}`);
+  setEl('cur-lap', msToStr(l.current_ms));
+  setEl('eng-temp', c.engine_temp||'—');
+  setEl('fuel-mix', FUEL_MIX[st.fuel_mix]||'—');
+  const inv=document.getElementById('lap-invalid-badge');
+  inv.textContent=l.invalid?'⚠ LAP INVALID':'';
+
+  // Badges
+  const db=document.getElementById('drs-badge');
+  db.textContent=c.drs?'AERO SLM':'AERO CORNER'; db.className='badge'+(c.drs?' on':'');
+  const pb=document.getElementById('pit-badge');
+  pb.textContent=l.pit_status===1?'PITTING':l.pit_status===2?'PIT LANE':'ON TRACK'; pb.className='badge'+(l.pit_status>0?' warn':'');
+  const sb=document.getElementById('sc-badge');
+  sb.textContent=SC_STATUS[s.safety_car]||'SC CLEAR'; sb.className='badge'+(s.safety_car>0?' warn':'');
+
+  // Inputs
+  setW('thr-fill',c.throttle*100); setEl('thr-val',Math.round(c.throttle*100)+'%');
+  setW('brk-fill',c.brake*100);    setEl('brk-val',Math.round(c.brake*100)+'%');
+
+  // Fuel + ERS
+  setEl('fuel-val',(st.fuel||0).toFixed(1));
+  setEl('fuel-laps',(st.fuel_laps||0).toFixed(1)+' laps');
+  setW('fuel-fill',(st.fuel||0)/110*100);
+  setEl('ers-val',Math.round(st.ers_pct||0)+'%');
+  setW('ers-fill',st.ers_pct||0);
+  setEl('ers-mode',ERS_MODES[st.ers_mode]||'—');
+
+  // Tyres — SVG car viz
+  const cmp=st.tyre_compound||'default';
+  const cb=document.getElementById('compound-badge');
+  cb.textContent=cmp; cb.className='comp-'+cmp.toLowerCase().replace(/[\s()]/g,'');
+  setEl('tyre-age',st.tyre_age||0);
+  ['FL','FR','RL','RR'].forEach(corner=>{
+    const i=TYRE_IDX[corner];
+    const surf=c.tyres_surface[i]||0, psi=(c.tyres_pressure[i]||0).toFixed(1);
+    const wear=(dmg.tyre_wear[i]||0);
+    const ts=TYRE_STATES[tempCardClass(surf,cmp)];
+    setSvgAttr(`svg-tyre-${corner}`,'fill',ts.fill);
+    setSvgAttr(`svg-tyre-${corner}`,'stroke',ts.stroke);
+    setSvgText(`svg-ts-${corner}`, surf||'—');
+    setSvgAttr(`svg-ts-${corner}`,'fill',ts.color);
+    setSvgText(`svg-tw-${corner}`, wear>0?wear.toFixed(1)+'%':'—');
+    setSvgAttr(`svg-tw-${corner}`,'fill',wearColor(wear));
+    const tyreDiv=document.getElementById(`svg-tyre-${corner}`);
+    if(tyreDiv) tyreDiv.className=`tyre tyre-${corner} ${wearClass(wear)}`;
+    setSvgText(`svg-ti-${corner}`, psi+' PSI');
+  });
+  [['FL',2],['FR',3],['RL',0],['RR',1]].forEach(([cn,i])=>{
+    const t=(c.brakes_temp||[])[i]||0, col=t<200?'#444':t<400?'#ffd700':t<700?'#ff6b00':'#e8002d';
+    const e=document.getElementById(`bt-${cn}`);
+    if(e){e.textContent=t+'°';e.style.color=col;}
+  });
+
+  // Lap times
+  setEl('last-lap',msToStr(l.last_ms));
+  setEl('best-lap',msToStr(l.best_ms));
+  setEl('cur-sector',['S1','S2','S3'][l.sector]||'—');
+  setEl('s1',l.s1_ms>0?msToStr(l.s1_ms):'—');
+  setEl('s2',l.s2_ms>0?msToStr(l.s2_ms):'—');
+  setEl('pit-stops',l.pit_stops||0);
+  setEl('penalties',(l.penalties||0)+'s');
+
+  // Damage + tyre wear
+  updateDamage(dmg);
+
+  // Map
+  updateMap(d.position, d.leaderboard);
+  updateLeaderboard(d.leaderboard);
+  if(d.events) updateEvents(d.events);
+
+  // Delta trace
+  trackLen=s.track_length||trackLen;
+  sector2dist=s.sector2_dist||sector2dist;
+  sector3dist=s.sector3_dist||sector3dist;
+  const bestLapNum=l.best_lap_num||0;
+  if(bestLapNum&&bestLapNum!==fetchedLapNum&&currentSessionUid){fetchedLapNum=bestLapNum;fetchBestLapRef(currentSessionUid,bestLapNum);}
+  if(l.num!==trackedLapNum){deltaTrail=[];trackedLapNum=l.num;msResults=new Array(MS_TOTAL).fill(null);msEntryMs=new Array(MS_TOTAL).fill(null);msEntryMs[0]=0;msLastDist=l.distance;renderMiniSectors();}
+  if(bestLapRef.length>1&&l.current_ms>0&&l.distance>10){
+    const ref=interpRef(l.distance);
+    if(ref!==null){deltaTrail.push({dist:l.distance,delta:l.current_ms-ref});if(deltaTrail.length>3000)deltaTrail=deltaTrail.filter((_,i)=>i%2===0);}
+  }
+  updateMiniSectors(l.distance, l.current_ms);
+  // Update big delta — throttled to 2x per second
+  const now=Date.now();
+  if(now-lastDeltaDisplay>=300){
+    lastDeltaDisplay=now;
+    const deltaEl=document.getElementById('delta-big');
+    if(deltaEl){
+      if(deltaTrail.length>0){
+        const last=deltaTrail[deltaTrail.length-1];
+        deltaEl.textContent=(last.delta>0?'+':'')+(last.delta/1000).toFixed(3)+'s';
+        deltaEl.className=last.delta>0?'pos':'neg';
+      } else {
+        deltaEl.textContent='—';
+        deltaEl.className='';
+      }
+    }
+  }
+}
+
+// ── WebSocket ────────────────────────────────────────────────────────────────
+function connect() {
+  if(ws) try{ws.close();}catch(e){}
+  ws=new WebSocket(WS_URL);
+  ws.onopen=()=>{setEl('connection','LIVE');document.getElementById('connection').className='live';};
+  ws.onmessage=e=>{try{applyState(JSON.parse(e.data));}catch(err){console.error(err);}};
+  ws.onclose=ws.onerror=()=>{setEl('connection','NO SIGNAL');document.getElementById('connection').className='dead';clearTimeout(reconnectTimer);reconnectTimer=setTimeout(connect,2000);};
+}
+connect();
+</script>
+</body>
+</html>
