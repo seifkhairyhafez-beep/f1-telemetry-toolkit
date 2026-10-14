@@ -1,5 +1,7 @@
 # F1 Telemetry & Setup Toolkit
 
+**English** | [Deutsch](README.de.md)
+
 A real-time telemetry dashboard and data-driven car setup generator for F1 25/26 (Codemasters/EA Sports F1 series), built from scratch around the game's UDP telemetry protocol.
 
 ## What it does
