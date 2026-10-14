@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #080808; display: flex; align-items: center; justify-content: center; height: 100vh; }
+
+.car-wrap {
+  position: relative;
+  width: 520px;
+  height: 720px;
+}
+
+.car-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: rotate(90deg);
+  display: block;
+}
+
+.tyre {
+  position: absolute;
+  width: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.tyre-label {
+  font-family: monospace;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #aaa;
+}
+
+.tyre-temp {
+  font-family: monospace;
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tyre-unit {
+  font-family: monospace;
+  font-size: 7px;
+  color: #888;
+}
+
+.tyre-wear {
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tyre-psi {
+  font-family: monospace;
+  font-size: 7px;
+  color: #888;
+}
+
+/* Corner positions — tight to each tyre */
+.tyre-FL { top: 220px; left: 123px; }
+.tyre-FR { top: 220px; left: 333px; }
+.tyre-RL { top: 465px; left: 124px; }
+.tyre-RR { top: 465px; left: 334px; }
+</style>
+</head>
+<body>
+<div class="car-wrap">
+  <img src="f1_car.png" alt="F1 car top view">
+
+  <!-- Front Left -->
+  <div class="tyre tyre-FL" id="svg-tyre-FL">
+    <span class="tyre-label">FL</span>
+    <span class="tyre-temp" id="svg-ts-FL" style="color:#39d353">98</span>
+    <span class="tyre-unit">°C surf</span>
+    <span class="tyre-wear" id="svg-tw-FL" style="color:#ffd700">28.5%</span>
+    <span class="tyre-psi" id="svg-ti-FL">23.4 PSI</span>
+  </div>
+
+  <!-- Front Right -->
+  <div class="tyre tyre-FR" id="svg-tyre-FR" style="align-items:center">
+    <span class="tyre-label">FR</span>
+    <span class="tyre-temp" id="svg-ts-FR" style="color:#39d353">95</span>
+    <span class="tyre-unit">°C surf</span>
+    <span class="tyre-wear" id="svg-tw-FR" style="color:#ffd700">31.2%</span>
+    <span class="tyre-psi" id="svg-ti-FR">23.2 PSI</span>
+  </div>
+
+  <!-- Rear Left -->
+  <div class="tyre tyre-RL" id="svg-tyre-RL">
+    <span class="tyre-label">RL</span>
+    <span class="tyre-temp" id="svg-ts-RL" style="color:#ff5555">112</span>
+    <span class="tyre-unit">°C surf</span>
+    <span class="tyre-wear" id="svg-tw-RL" style="color:#ff6b00">62.1%</span>
+    <span class="tyre-psi" id="svg-ti-RL">21.8 PSI</span>
+  </div>
+
+  <!-- Rear Right -->
+  <div class="tyre tyre-RR" id="svg-tyre-RR" style="align-items:center">
+    <span class="tyre-label">RR</span>
+    <span class="tyre-temp" id="svg-ts-RR" style="color:#ffd700">107</span>
+    <span class="tyre-unit">°C surf</span>
+    <span class="tyre-wear" id="svg-tw-RR" style="color:#ff6b00">58.4%</span>
+    <span class="tyre-psi" id="svg-ti-RR">21.5 PSI</span>
+  </div>
+</div>
+</body>
+</html>

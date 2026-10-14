@@ -1,0 +1,15 @@
+# Session data (large, personal, regenerated locally)
+f1_telemetry.db
+*.db
+
+# Python
+__pycache__/
+*.pyc
+
+# Personal working notes
+f1-26-career-season-log.md
+f1-project-context.md
+
+# OS cruft
+Thumbs.db
+.DS_Store

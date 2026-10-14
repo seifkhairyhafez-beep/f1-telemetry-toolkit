@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 26 Setup Guide — Every Circuit, Every Style</title>
+<style>
+  :root{
+    --bg:#0a0b0d;
+    --panel:#15171a;
+    --panel-2:#1c1f23;
+    --line:#2a2d32;
+    --text:#e8e9eb;
+    --muted:#9aa0a6;
+    --red:#e10600;
+    --red-dim:#8a0500;
+    --red-glow: rgba(225,6,0,0.35);
+    --accent2:#2dd4bf;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(225,6,0,0.10), transparent 60%),
+      radial-gradient(700px 400px at -10% 110%, rgba(225,6,0,0.06), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height:100vh;
+  }
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 28px;
+    background:rgba(10,11,13,0.85);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand .stripe{width:8px;height:34px;background:linear-gradient(var(--red),#7a0500);border-radius:2px;}
+  .brand h1{font-size:19px; margin:0; letter-spacing:0.5px; font-weight:800;}
+  .brand h1 span{color:var(--red);}
+  .brand .tag{font-size:12px;color:var(--muted);margin-top:1px;}
+  .nav-actions{display:flex; align-items:center; gap:10px;}
+  .pill-toggle{
+    display:flex; background:var(--panel-2); border:1px solid var(--line); border-radius:999px; padding:3px; gap:2px;
+  }
+  .pill-toggle button{
+    border:none; background:transparent; color:var(--muted); padding:8px 16px; border-radius:999px;
+    font-size:13px; font-weight:600; cursor:pointer; transition:all .15s ease; letter-spacing:0.2px;
+  }
+  .pill-toggle button.active.stable{background:var(--accent2); color:#04201c;}
+  .pill-toggle button.active.aggressive{background:var(--red); color:#fff;}
+  .back-btn{
+    display:none; align-items:center; gap:6px; background:var(--panel-2); border:1px solid var(--line);
+    color:var(--text); padding:9px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;
+  }
+  .back-btn:hover{border-color:var(--red);}
+  .container{max-width:1280px; margin:0 auto; padding:24px 28px 80px;}
+
+  .notice{
+    border:1px solid var(--red-dim); background:linear-gradient(90deg, rgba(225,6,0,0.10), rgba(225,6,0,0.02));
+    border-radius:10px; padding:14px 18px; margin-bottom:24px; font-size:13.5px; line-height:1.55; color:var(--text);
+  }
+  .notice b{color:#ff6b63;}
+
+  /* Grid view */
+  .section-title{font-size:13px; text-transform:uppercase; letter-spacing:1.6px; color:var(--muted); margin:0 0 14px;}
+  .track-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(252px,1fr)); gap:16px;
+  }
+  .track-card{
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line); border-radius:14px; padding:18px; cursor:pointer;
+    transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+    position:relative; overflow:hidden;
+  }
+  .track-card::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--red); opacity:0; transition:opacity .15s;
+  }
+  .track-card:hover{transform:translateY(-3px); border-color:var(--red-dim); box-shadow:0 10px 30px -12px var(--red-glow);}
+  .track-card:hover::before{opacity:1;}
+  .tc-row{display:flex; align-items:center; justify-content:space-between;}
+  .tc-round{font-size:11px; color:var(--muted); font-weight:700; letter-spacing:1px;}
+  .tc-flag{font-size:22px;}
+  .tc-name{font-size:17px; font-weight:800; margin:10px 0 2px;}
+  .tc-country{font-size:12.5px; color:var(--muted);}
+  .tc-meta{display:flex; gap:14px; margin-top:14px; font-size:11.5px; color:var(--muted);}
+  .tc-meta b{color:var(--text); font-size:13px; display:block;}
+  .tc-df{
+    margin-top:14px; height:6px; border-radius:4px; background:var(--line); overflow:hidden;
+  }
+  .tc-df i{display:block; height:100%; background:linear-gradient(90deg,var(--accent2),var(--red));}
+  .tc-df-label{font-size:10.5px; color:var(--muted); margin-top:6px; letter-spacing:0.5px; text-transform:uppercase;}
+
+  /* Track detail view */
+  .hero{
+    display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap;
+    border-bottom:1px solid var(--line); padding-bottom:20px; margin-bottom:24px;
+  }
+  .hero-left{display:flex; gap:16px; align-items:center;}
+  .hero-flag{font-size:46px; line-height:1;}
+  .hero h2{font-size:30px; margin:0; font-weight:800;}
+  .hero .sub{color:var(--muted); font-size:14px; margin-top:4px;}
+  .hero-stats{display:flex; gap:26px;}
+  .hero-stat{text-align:right;}
+  .hero-stat .v{font-size:20px; font-weight:800;}
+  .hero-stat .l{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;}
+
+  .layout{display:grid; grid-template-columns:340px 1fr; gap:22px; align-items:start;}
+  @media (max-width:980px){ .layout{grid-template-columns:1fr;} }
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px;
+  }
+  .panel h3{font-size:13px; text-transform:uppercase; letter-spacing:1.6px; color:var(--muted); margin:0 0 16px; display:flex; align-items:center; gap:8px;}
+  .panel h3::before{content:""; width:4px; height:14px; background:var(--red); border-radius:2px;}
+
+  .corner-bars{display:flex; flex-direction:column; gap:10px; margin-bottom:18px;}
+  .corner-row{display:grid; grid-template-columns:70px 1fr 28px; align-items:center; gap:10px; font-size:12.5px;}
+  .corner-row .lbl{color:var(--muted);}
+  .corner-row .bar{height:9px; background:var(--line); border-radius:5px; overflow:hidden;}
+  .corner-row .bar i{display:block; height:100%; border-radius:5px;}
+  .corner-row .slow i{background:#2dd4bf;}
+  .corner-row .medium i{background:#f59e0b;}
+  .corner-row .fast i{background:var(--red);}
+  .corner-row .num{text-align:right; font-weight:700;}
+
+  .info-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px;}
+  .info-list li{font-size:13px; line-height:1.5; padding-left:18px; position:relative; color:#cdd0d4;}
+  .info-list li::before{content:"▸"; color:var(--red); position:absolute; left:0; top:0; font-size:12px;}
+  .info-list.straights li::before{content:"—"; color:var(--accent2);}
+
+  .subhead{font-size:11px; text-transform:uppercase; letter-spacing:1.4px; color:var(--muted); margin:18px 0 8px;}
+  .subhead:first-child{margin-top:0;}
+
+  .style-note{
+    margin-top:18px; padding:12px 14px; border-radius:10px; font-size:12.5px; line-height:1.55;
+    border:1px solid var(--line); background:var(--panel-2); color:#cdd0d4;
+  }
+  .style-note b{color:var(--text);}
+
+  /* Setup categories */
+  .cat{margin-bottom:18px;}
+  .cat-head{
+    display:flex; align-items:center; gap:10px; margin-bottom:10px;
+  }
+  .cat-head .dot{width:9px; height:9px; border-radius:50%; background:var(--red);}
+  .cat-head h4{font-size:14.5px; margin:0; font-weight:800; letter-spacing:0.3px;}
+  .param-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media (max-width:640px){ .param-grid{grid-template-columns:1fr;} }
+  .param{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:14px 16px;
+    transition:border-color .15s ease;
+  }
+  .param:hover{border-color:var(--red-dim);}
+  .param-top{display:flex; align-items:baseline; justify-content:space-between; gap:8px;}
+  .param-name{font-size:13px; font-weight:700; color:var(--text);}
+  .param-value{font-size:17px; font-weight:800; color:var(--red); white-space:nowrap;}
+  .param-value small{font-size:11px; color:var(--muted); font-weight:600;}
+  .param-why{margin-top:8px; font-size:12.5px; line-height:1.55; color:#aeb2b7;}
+  .param-why b{color:#d8dadc; font-weight:600;}
+
+  .footer-note{
+    margin-top:30px; padding:16px 18px; border-radius:12px; border:1px solid var(--line); background:var(--panel);
+    font-size:12px; color:var(--muted); line-height:1.6;
+  }
+  .badge{
+    display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:0.6px; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--muted); margin-left:8px; vertical-align:middle;
+  }
+  .badge.new{color:#04201c; background:var(--accent2); border-color:var(--accent2);}
+
+  ::-webkit-scrollbar{width:10px; height:10px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--line); border-radius:6px;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--red-dim);}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="stripe"></div>
+      <div>
+        <h1>F1 <span>26</span> Setup Guide</h1>
+        <div class="tag">Community meta setups · every track on the 2026 calendar · snapshot 10 Jul 2026</div>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <button class="back-btn" id="backBtn">← All circuits</button>
+      <div class="pill-toggle" id="styleToggle">
+        <button class="stable active" data-style="stable">Stable / Safe</button>
+        <button class="aggressive" data-style="aggressive">Aggressive / Fast</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container" id="app"></div>
+
+<script>
+/* =========================================================================
+   F1 26 SETUP GUIDE — DATA + GENERATION ENGINE
+   ---------------------------------------------------------------------
+   Setup numbers are community-informed STARTING POINTS for the F1 26
+   handling model (2026 regulations: lighter, narrower, more efficient
+   cars with active aero and far less mechanical/ground-effect downforce
+   than the 2022-25 generation, leaning much more heavily on ERS
+   deployment for straight-line performance). Treat every value here as
+   a baseline to fine-tune to your own car balance, assists and tyre
+   choice — not as a guaranteed quali-lap setup.
+   ========================================================================= */
+
+// tags: df=downforce need, tr=traction importance, br=braking severity,
+// bm=bumpiness, kb=kerb aggression, gr=track grip level, td=tyre degradation
+const TRACKS = [
+  { id:"melbourne", round:1, name:"Albert Park", country:"Australia", flag:"🇦🇺", length:"5.278 km", laps:58,
+    corners:{slow:4, medium:8, fast:4},
+    straights:["Run from Turn 13 to Turn 1 (DRS zone)","Lakeside blast through Turns 9-11"],
+    challenges:["Quick direction changes through the lakeside esses","Traction out of the Turn 9-10 chicane onto the back straight","Riding the sausage kerbs without unsettling the rear"],
+    tags:{df:6, tr:5, br:5, bm:3, kb:4, gr:7, td:5} },
+
+  { id:"shanghai", round:2, name:"Shanghai International Circuit", country:"China", flag:"🇨🇳", length:"5.451 km", laps:56,
+    corners:{slow:5, medium:6, fast:3},
+    straights:["1.2 km back straight into the Turn 14 hairpin","Pit straight into the Turn 1-2 spiral"],
+    challenges:["The long, decreasing-radius Turn 1-2 spiral that punishes an aggressive entry","Traction onto the back straight out of Turn 13","Abrasive, low-grip tarmac that chews through tyres"],
+    tags:{df:6, tr:6, br:6, bm:4, kb:4, gr:6, td:7} },
+
+  { id:"suzuka", round:3, name:"Suzuka International Racing Course", country:"Japan", flag:"🇯🇵", length:"5.807 km", laps:53,
+    corners:{slow:3, medium:6, fast:9},
+    straights:["Pit straight into Turn 1","130R flat into the Casio Triangle"],
+    challenges:["Sustained high-speed direction changes through the Esses (Turns 3-7)","Aero platform stability through 130R at full commitment","Late-braking and traction through the Casio Triangle chicane"],
+    tags:{df:8, tr:4, br:4, bm:3, kb:3, gr:8, td:7} },
+
+  { id:"sakhir", round:4, name:"Bahrain International Circuit", country:"Bahrain", flag:"🇧🇭", length:"5.412 km", laps:57,
+    corners:{slow:6, medium:5, fast:3},
+    straights:["Main straight into the Turn 1 hairpin","Back straight into Turns 8-10"],
+    challenges:["Long, heavy braking zones into Turns 1, 4 and 10","Traction off slow corners onto the straights","Sandy, abrasive surface that drops grip off-line"],
+    tags:{df:5, tr:7, br:8, bm:4, kb:3, gr:5, td:8} },
+
+  { id:"jeddah", round:5, name:"Jeddah Corniche Circuit", country:"Saudi Arabia", flag:"🇸🇦", length:"6.174 km", laps:50,
+    corners:{slow:2, medium:5, fast:12},
+    straights:["Turn 27 onto the front straight","Turn 13 to Turn 22 high-speed run along the coast"],
+    challenges:["Blind, wall-lined high-speed corners that punish the smallest mistake","Carrying minimum speed through fast kinks without lifting","Bravery and commitment with almost no run-off"],
+    tags:{df:4, tr:3, br:4, bm:5, kb:2, gr:7, td:6} },
+
+  { id:"miami", round:6, name:"Miami International Autodrome", country:"United States", flag:"🇺🇸", length:"5.412 km", laps:57,
+    corners:{slow:5, medium:7, fast:5},
+    straights:["Turn 16-17 run to the Turn 1 braking zone","Back straight through the marina section"],
+    challenges:["Bumpy, low-grip surface around the stadium and marina sections","Balancing the technical Turns 14-16 complex with the long straights","Traction out of the Turn 17 hairpin onto the front straight"],
+    tags:{df:6, tr:6, br:6, bm:6, kb:5, gr:6, td:6} },
+
+  { id:"montreal", round:7, name:"Circuit Gilles Villeneuve", country:"Canada", flag:"🇨🇦", length:"4.361 km", laps:70,
+    corners:{slow:6, medium:4, fast:3},
+    straights:["Long back straight into the Turn 10 hairpin","Pit straight into the Turn 1-2 chicane"],
+    challenges:["Heavy, late-braking zones into the chicanes and final hairpin","Riding the kerbs near the Wall of Champions without contact","Traction out of slow corners onto two long straights"],
+    tags:{df:4, tr:7, br:9, bm:6, kb:8, gr:5, td:5} },
+
+  { id:"monaco", round:8, name:"Circuit de Monaco", country:"Monaco", flag:"🇲🇨", length:"3.337 km", laps:78,
+    corners:{slow:13, medium:4, fast:2},
+    straights:["Tunnel exit into the chicane braking zone"],
+    challenges:["Pinpoint precision in the tightest, narrowest confines on the calendar","Traction out of the Grand Hotel hairpin and the swimming pool exit","Barriers within centimetres of every apex — zero margin for error"],
+    tags:{df:10, tr:9, br:7, bm:5, kb:4, gr:6, td:3} },
+
+  { id:"barcelona", round:9, name:"Circuit de Barcelona-Catalunya", country:"Spain", flag:"🇪🇸", length:"4.657 km", laps:66,
+    corners:{slow:4, medium:6, fast:6},
+    straights:["Main straight into Turn 1","Back straight into Turn 10"],
+    challenges:["Long, high-load Turn 3 that punishes front-left tyre wear","Balancing fast, sweeping corners with the slower final sector","Wind sensitivity across the exposed back straight"],
+    tags:{df:7, tr:6, br:5, bm:3, kb:3, gr:6, td:8} },
+
+  { id:"madring", round:10, name:"Madring (Madrid)", country:"Spain", flag:"🇪🇸", length:"5.474 km", laps:55, isNew:true,
+    corners:{slow:8, medium:8, fast:6},
+    straights:["Main pit straight into the Turn 1 braking zone","Boulevard back straight through the exhibition-centre section"],
+    challenges:["Brand-new, evolving track surface with limited grip data","A genuine hybrid of tight street-circuit corners and flowing, purpose-built sweeps","Bumps and grip changes around the temporary street sections"],
+    tags:{df:7, tr:7, br:6, bm:5, kb:4, gr:6, td:6},
+    dataNote:"Madring is the one circuit on this calendar with no real-world racing history to draw from — the track didn't exist until it was built for F1 26. Its in-game model comes from the venue's official CAD design data rather than years of lap times, driver feedback and laser scans like every other track here gets. That makes the numbers below the most speculative in the app: a layout-based best guess (tight street-style corners mixed with fast purpose-built sweeps and a banked signature turn), not an estimate grounded in how the place has actually driven. Treat this page as your widest-margin starting point of the lot." },
+
+  { id:"redbullring", round:11, name:"Red Bull Ring", country:"Austria", flag:"🇦🇹", length:"4.318 km", laps:71,
+    corners:{slow:4, medium:3, fast:3},
+    straights:["Pit straight into the Turn 1 hairpin","Turn 2 to Turn 3 downhill blast"],
+    challenges:["Heavy braking into Turns 1, 3 and 4 on a short, punchy lap","Traction out of slow corners onto short straights","Elevation changes that unsettle braking stability"],
+    tags:{df:5, tr:7, br:7, bm:4, kb:6, gr:6, td:6} },
+
+  { id:"silverstone", round:12, name:"Silverstone Circuit", country:"United Kingdom", flag:"🇬🇧", length:"5.891 km", laps:52,
+    corners:{slow:3, medium:5, fast:10},
+    straights:["Hangar Straight after Stowe","Wellington Straight into Brooklands"],
+    challenges:["Sustained high-speed lateral loads through Maggotts-Becketts-Chapel","Front-left tyre temperature management across a lap full of fast corners","Keeping the aero platform stable at maximum commitment"],
+    tags:{df:7, tr:4, br:4, bm:3, kb:3, gr:7, td:8} },
+
+  { id:"spa", round:13, name:"Circuit de Spa-Francorchamps", country:"Belgium", flag:"🇧🇪", length:"7.004 km", laps:44,
+    corners:{slow:4, medium:4, fast:11},
+    straights:["Kemmel Straight after Eau Rouge-Raidillon","Pit straight into La Source"],
+    challenges:["Full-commitment through Eau Rouge-Raidillon at the limit of grip and bravery","Running minimum drag for the long Kemmel Straight without losing the lap elsewhere","Changeable, often wet, microclimate weather across the lap"],
+    tags:{df:5, tr:5, br:5, bm:3, kb:3, gr:6, td:6} },
+
+  { id:"hungaroring", round:14, name:"Hungaroring", country:"Hungary", flag:"🇭🇺", length:"4.381 km", laps:70,
+    corners:{slow:8, medium:8, fast:1},
+    straights:["Short pit straight into Turn 1"],
+    challenges:["A relentless, twisting lap that gives the tyres almost no rest — \"Monaco without the walls\"","Traction out of a long string of slow- and medium-speed corners","Hot, abrasive track surface that accelerates degradation"],
+    tags:{df:9, tr:8, br:5, bm:4, kb:5, gr:6, td:7} },
+
+  { id:"zandvoort", round:15, name:"Circuit Zandvoort", country:"Netherlands", flag:"🇳🇱", length:"4.259 km", laps:72,
+    corners:{slow:5, medium:6, fast:5},
+    straights:["Pit straight onto the banked Tarzan hairpin","Run to the banked final corner"],
+    challenges:["Managing load through the steeply banked Turn 3 and final corner","A narrow, dune-lined track that makes overtaking brutally difficult","Bumpy surface that unsettles the car under braking"],
+    tags:{df:7, tr:6, br:5, bm:5, kb:5, gr:6, td:6} },
+
+  { id:"monza", round:16, name:"Autodromo Nazionale Monza", country:"Italy", flag:"🇮🇹", length:"5.793 km", laps:53,
+    corners:{slow:6, medium:2, fast:3},
+    straights:["Start/finish straight into the Rettifilo chicane","Back straight from Lesmo to the Variante Ascari"],
+    challenges:["The lowest-drag, highest-top-speed lap of the season — the \"Temple of Speed\"","Heavy, late braking into the three big chicanes","Traction out of the chicanes onto long straights for the slipstream battle"],
+    tags:{df:1, tr:8, br:9, bm:4, kb:6, gr:6, td:5} },
+
+  { id:"baku", round:17, name:"Baku City Circuit", country:"Azerbaijan", flag:"🇦🇿", length:"6.003 km", laps:51,
+    corners:{slow:8, medium:4, fast:5},
+    straights:["2.2 km main straight — the longest on the calendar","Run from the castle section back to Turn 1"],
+    challenges:["Reconciling a near-flat-out 2.2 km straight with a wall-to-wall castle section","Heavy braking from well over 300 km/h into Turn 1","Walls inches from the car demand absolute precision"],
+    tags:{df:3, tr:6, br:7, bm:4, kb:2, gr:6, td:5} },
+
+  { id:"marinabay", round:18, name:"Marina Bay Street Circuit", country:"Singapore", flag:"🇸🇬", length:"4.940 km", laps:62,
+    corners:{slow:9, medium:6, fast:4},
+    straights:["Pit straight along Republic Boulevard","Run along the Anderson Bridge section"],
+    challenges:["Bumpy street surface demanding compliant ride over kerbs and drain covers","Frequent, heavy braking into a long sequence of 90-degree corners","Punishing heat and humidity over one of the longest races of the year"],
+    tags:{df:9, tr:8, br:8, bm:7, kb:4, gr:6, td:6} },
+
+  { id:"cota", round:19, name:"Circuit of the Americas", country:"United States", flag:"🇺🇸", length:"5.513 km", laps:56,
+    corners:{slow:6, medium:5, fast:6},
+    straights:["Back straight into the Turn 12 hairpin","Uphill blast to the Turn 1 apex"],
+    challenges:["A notoriously bumpy surface that unsettles the car at speed","High-speed esses (Turns 2-9) that mirror Silverstone's Maggotts-Becketts","Heavy braking zones into Turns 1 and 12"],
+    tags:{df:6, tr:6, br:6, bm:7, kb:5, gr:6, td:6} },
+
+  { id:"mexico", round:20, name:"Autódromo Hermanos Rodríguez", country:"Mexico", flag:"🇲🇽", length:"4.304 km", laps:71,
+    corners:{slow:6, medium:4, fast:4},
+    straights:["Long DRS straight into the Turn 1 stadium braking zone"],
+    challenges:["High-altitude thin air strips away downforce and cooling, forcing extra wing","Heavy braking from top speed into the Turn 1-2 stadium hairpin","Dusty, low-grip surface away from the racing line"],
+    tags:{df:8, tr:7, br:8, bm:4, kb:4, gr:5, td:4} },
+
+  { id:"interlagos", round:21, name:"Autódromo José Carlos Pace", country:"Brazil", flag:"🇧🇷", length:"4.309 km", laps:71,
+    corners:{slow:5, medium:6, fast:4},
+    straights:["Uphill start/finish straight","Reta Oposta back straight"],
+    challenges:["Notoriously changeable weather that can demand a setup compromise mid-weekend","Significant elevation change that loads the car unevenly under braking and traction","Bumpy, slippery surface in several braking zones"],
+    tags:{df:6, tr:7, br:6, bm:5, kb:5, gr:5, td:6} },
+
+  { id:"vegas", round:22, name:"Las Vegas Strip Circuit", country:"United States", flag:"🇺🇸", length:"6.201 km", laps:50,
+    corners:{slow:6, medium:5, fast:6},
+    straights:["Las Vegas Boulevard — a 1.9 km blast down the Strip","Koval Lane back straight"],
+    challenges:["Two enormous straights demanding the lowest drag the car can carry","Cold night-time track and tyre temperatures that strip away grip","Smooth but wall-lined — small mistakes end the lap instantly"],
+    tags:{df:2, tr:6, br:6, bm:2, kb:3, gr:5, td:4} },
+
+  { id:"lusail", round:23, name:"Lusail International Circuit", country:"Qatar", flag:"🇶🇦", length:"5.380 km", laps:57,
+    corners:{slow:3, medium:6, fast:7},
+    straights:["Pit straight into Turn 1"],
+    challenges:["Long, fast, sweeping corners that load the tyres harder than almost anywhere else","Extreme tyre degradation under sustained high-speed cornering loads","Managing heat — both track temperature and driver fatigue"],
+    tags:{df:7, tr:5, br:4, bm:3, kb:3, gr:6, td:9} },
+
+  { id:"yasmarina", round:24, name:"Yas Marina Circuit", country:"United Arab Emirates", flag:"🇦🇪", length:"5.281 km", laps:58,
+    corners:{slow:6, medium:5, fast:4},
+    straights:["Longest straight into the Turn 6/7 braking zone","Back straight into Turn 11"],
+    challenges:["Balancing low drag for the long straights against grip for the twisty final sector","Smooth, modern surface that rewards an aggressively low ride height","Track temperature drops sharply through the twilight race, shifting balance"],
+    tags:{df:5, tr:6, br:6, bm:2, kb:3, gr:7, td:4} },
+];
+
+// ---- Style deltas applied on top of the track-derived baseline ----------
+const STYLE = {
+  stable: {
+    label:"Stable / Safe", accent:"var(--accent2)",
+    wing:+2, diffOn:+5, diffOff:+5, camber:+0.05, toeF:-0.01, toeR:+0.015,
+    susp:-2, arb:-2, rideHeight:+3, brakePressure:-3, brakeBias:-1.5,
+    tyrePressF:+0.2, tyrePressR:+0.2,
+    blurb:"Softer, more planted and more forgiving. Slightly more wing, a more locked differential, softer suspension and a touch more ride height trade outright pace for predictability — a great base for race stints, traffic and changeable grip."
+  },
+  aggressive: {
+    label:"Aggressive / Fast", accent:"var(--red)",
+    wing:-3, diffOn:-5, diffOff:-5, camber:-0.10, toeF:+0.02, toeR:-0.01,
+    susp:+3, arb:+2, rideHeight:-3, brakePressure:+3, brakeBias:+1.5,
+    tyrePressF:-0.2, tyrePressR:-0.2,
+    blurb:"Lower drag, sharper rotation and a stiffer, lower-riding platform aimed at outright lap time. Faster over a single lap, but less forgiving over kerbs, in traffic, and as the tyres wear down through a stint."
+  }
+};
+
+// ---- helpers -------------------------------------------------------------
+const clip = (v,lo,hi)=> Math.min(hi, Math.max(lo, v));
+const r0 = v => Math.round(v);
+const r5 = v => Math.round(v/5)*5; // transmission diff sliders move in steps of 5 in-game
+const r1 = v => Math.round(v*10)/10;
+const r2 = v => Math.round(v*100)/100;
+const lvl = (v,lo,hi)=>{ const p=(v-lo)/(hi-lo); return p<=0.34?'low':p>=0.66?'high':'mid'; };
+const styleTail = (style, planted, sharp) => style==='aggressive'
+  ? ` In the <b>aggressive</b> trim it's nudged toward ${sharp} for outright pace.`
+  : ` In the <b>stable</b> trim it's nudged toward ${planted} for a more predictable, race-ready balance.`;
+
+function lowDriftStraight(t){ return t.straights[0].replace(/^The /,'').toLowerCase(); }
+function topChallenge(t,i=0){ return t.challenges[i].toLowerCase(); }
+function brakingChallenge(t){
+  const found = t.challenges.find(c=>/brak|stop|lock/i.test(c));
+  return (found || t.challenges[0]).toLowerCase();
+}
+function rotationChallenge(t){
+  const found = t.challenges.find(c=>/traction|rotat|corner|esses|chicane|hairpin|twist|direction/i.test(c) && !/brak/i.test(c));
+  return (found || t.challenges[t.challenges.length-1]).toLowerCase();
+}
+
+// On-the-fly brake bias guidance — a real technique in F1 25/26: most wheels and
+// pads can have brake bias mapped to a paddle/stick shortcut so it can be nudged
+// a click or two mid-lap, corner to corner, rather than left fixed all race.
+function onTheFlyBias(t, base, style){
+  const fwd = clip(base + 2, 50, 65);
+  const bwd = clip(base - 2, 49, 64);
+  return `Your setup screen number (<b>${base}%</b>) is only the <i>starting</i> point — most sim racers map brake bias to a wheel paddle, d-pad or stick shortcut so it can be nudged a click at a time — the in-game adjustment moves in whole <b>1% steps</b>, so one or two clicks (≈1–2%) is all it usually takes — corner to corner, without ever opening the menu. ${t.name} is a good example of why that matters: into ${brakingChallenge(t)}, shifting bias forward toward around <b>${fwd}%</b> loads the front axle harder, shortens the stop and helps the nose rotate in. Then, through ${rotationChallenge(t)}, easing it back toward roughly <b>${bwd}%</b> takes load off the fronts, lowers your lock-up risk on a trailed brake, and lets the rear rotate more freely into the apex. The simplest read on which way to move it: if the <b>front</b> tyres lock first on entry, you're too far forward — click it back; if the <b>rear</b> steps out or the car wants to spin on the way in, you're too far back — click it forward. ${style==='aggressive' ? `In the aggressive trim, lean on the forward end of that range to sharpen rotation — it's faster, but a single mistimed click costs you a spin.` : `In the stable trim, keep the swings small and favour the rearward half of that range — less ultimate rotation, but a much smaller chance of locking up or snapping the rear under pressure.`}`;
+}
+
+// ---- per-parameter explanation builders -----------------------------------
+const EXPLAIN = {
+  frontWing(t,v,style){
+    let head;
+    if (v<=20) head = `Run low at <b>${v}/50</b> because ${t.name} is a low-drag track — every bit of front wing you shed pays back down ${lowDriftStraight(t)}.`;
+    else if (v>=37) head = `Run high at <b>${v}/50</b> to chase front-end load — ${t.name} is dominated by ${topChallenge(t)}, and the only way to find missing front grip on the 2026 cars is to lean on the wing.`;
+    else head = `Set to a balanced <b>${v}/50</b> — enough front aero to cope with ${t.name}'s mixed corner profile without paying too big a drag penalty on the straights.`;
+    return head + ` Remember the 2026 regulations strip away a lot of the old ground-effect and mechanical downforce, so even a "low" front wing setting here sits noticeably higher than the low-drag specs you'd have run in previous seasons. These cars also carry a baked-in tendency to understeer, and with active aero (X-mode) shedding drag for you on the straights, leaning on a little extra front wing to claw back that missing front-end bite costs far less top speed than it used to — which is why this value sits a touch higher than a pure drag-minimising number would.` + styleTail(style,'a touch more security through direction changes','a fraction less drag and a sharper initial turn-in');
+  },
+  rearWing(t,v,style){
+    let head;
+    if (v<=18) head = `Trimmed right down to <b>${v}/50</b> — ${t.name} rewards a low-drag rear end above almost everything else, especially along ${lowDriftStraight(t)}, and the 2026 cars claw the lost stability back through stronger ERS deployment and active-aero stall on the straight.`;
+    else if (v>=38) head = `Wound right up to <b>${v}/50</b> — ${t.name}'s lap is built around ${topChallenge(t)}, so rear stability and traction matter far more than the small straight-line speed you'd gain from trimming wing.`;
+    else head = `Set to <b>${v}/50</b>, the classic middle ground — enough rear downforce to keep the car settled through ${t.name}'s quicker corners while still giving you a usable top speed on the straights.`;
+    return head + styleTail(style,'extra rear security under braking and on tired tyres','reduced drag and a more responsive rear end on entry');
+  },
+  onThrottleDiff(t,v,style){
+    let head = `Run high at <b>${v}%</b> — in the F1 26 game a heavily locked on-throttle differential is what puts the power down cleanly <i>and</i> helps the car rotate off the corner, so the fast in-game setups sit up near 90-100% rather than the lower numbers real-car logic would suggest. ${t.name}'s ${topChallenge(t)} rewards that drive out of the corner. It's eased back a touch on the lower-grip, traction-critical tracks where too much lock just lights up the rears on exit.`;
+    return head + styleTail(style,'a hair more lock for stability and drive','a slightly more open diff that frees rotation but asks more throttle discipline');
+  },
+  offThrottleDiff(t,v,style){
+    let head;
+    if (v>=50) head = `Set firmer at <b>${v}%</b> — ${t.name} has serious braking demands (${topChallenge(t)}), and more lock on lift-off keeps the rear settled and predictable as you trail-brake into the apex.`;
+    else head = `Opened up to <b>${v}%</b> — a freer rear on lift-off helps the car rotate into ${t.name}'s slower corners, trading a little entry stability for sharper turn-in where rotation matters more than outright braking security.`;
+    return head + styleTail(style,'a more locked rear for confidence-inspiring braking stability','a freer rear that rotates faster into the apex');
+  },
+  frontCamber(t,v,style){
+    return `Run at <b>${v}°</b> — ${t.name}'s mix of ${t.corners.fast} fast and ${t.corners.medium} medium-speed corners means the front tyres spend a lot of the lap loaded up, so extra negative camber keeps more of the contact patch on the road through those phases. Push it any further and you'd start cooking the inside shoulder of the front tyres on the straights.` + styleTail(style,'slightly less negative camber to protect tyre life and front temperatures','more negative camber to maximise peak cornering grip over a single lap');
+  },
+  rearCamber(t,v,style){
+    return `Run at <b>${v}°</b> — enough negative camber to add lateral grip through ${t.name}'s faster corners (${t.corners.fast} of them on this lap) while keeping enough of the tyre flat under braking and traction for stability and even wear.` + styleTail(style,'a touch less negative for better traction and rear-tyre survival','more negative for maximum rear-end bite in the fast stuff');
+  },
+  frontToe(t,v,style){
+    let head;
+    if (v>=0.20) head = `Opened out to <b>${v}°</b> of toe-out — ${t.name} is dominated by direction changes and tighter corners, so extra toe-out sharpens the initial turn-in response at the cost of a little straight-line stability you can afford to give up here.`;
+    else head = `Kept tight at <b>${v}°</b> of toe-out — ${t.name} carries serious speed in a straight line, so minimal toe-out keeps the front end calm and the tyres cool rather than scrubbing and overheating on the straights.`;
+    return head + styleTail(style,'less toe-out for a calmer, more stable front end','more toe-out for an instantly responsive turn-in');
+  },
+  rearToe(t,v,style){
+    return `Set to <b>${v}°</b> of toe-in — this is the classic stability-versus-agility trade-off at the rear: enough toe-in here to keep the car settled under braking and traction (key given ${topChallenge(t)}), without adding so much that the car feels reluctant to rotate.` + styleTail(style,'extra toe-in for maximum stability through long stints','reduced toe-in to free up the rear for faster direction changes');
+  },
+  frontSuspension(t,v,style){
+    let head = (t.tags.bm>=6)
+      ? `Softened to <b>${v}/41</b> — ${t.name} is one of the bumpier circuits on the calendar, and a softer front end keeps the tyre in contact with the ground over the bumps and kerbs rather than skipping across them.`
+      : `Set to <b>${v}/41</b> — stiff enough to support ${t.name}'s aero platform through the faster corners without losing mechanical grip in the slower technical sections.`;
+    return head + styleTail(style,'a softer setting that rides bumps and kerbs more gently','a stiffer setting for a sharper, more responsive front end');
+  },
+  rearSuspension(t,v,style){
+    let head = (t.tags.bm>=6)
+      ? `Softened to <b>${v}/41</b> to absorb ${t.name}'s rough surface and keep the rear tyres planted under braking and traction rather than skating over the bumps.`
+      : `Set to <b>${v}/41</b>, slightly stiffer than the front, to support the rear under braking and traction while still giving the platform the stability it needs at speed.`;
+    return head + styleTail(style,'extra compliance for confidence over kerbs and through bumps','a stiffer rear for maximum traction response and platform control');
+  },
+  frontARB(t,v,style){
+    return `Set to <b>${v}/41</b> — ${t.name} has ${t.corners.fast} high-speed corners against ${t.corners.slow} slow ones, so the front bar is tuned to balance load transfer in the quick stuff against the mechanical grip you still need to rotate the car through the tight sections.` + styleTail(style,'a softer bar that leans on mechanical grip in slow corners','a stiffer bar that sharpens turn-in and resists roll in the fast stuff');
+  },
+  rearARB(t,v,style){
+    return `Set to <b>${v}/41</b> — softening the rear bar relative to the front helps put the power down out of ${t.name}'s traction zones, while still giving enough support to keep the rear from rolling excessively through the faster corners.` + styleTail(style,'a softer rear bar that maximises traction off the corners','a stiffer rear bar that sharpens rotation at turn-in');
+  },
+  frontRideHeight(t,v,style){
+    let head = (t.tags.bm>=6 || t.tags.kb>=6)
+      ? `Raised to <b>${v}/41</b> — in the F1 26 game a low front end is fast (it feeds downforce and even top speed), but ${t.name} punishes it with bottoming over the bumps and kerbs (${topChallenge(t)}), which snaps grip and spins the car. So it's lifted off the deck just enough to stop the floor grounding out — a track-forced compromise, not a preference.`
+      : `Run low at <b>${v}/41</b> — in the F1 26 game the lower you run the front, the more downforce (and even top speed) you get, so on ${t.name}'s smooth surface you take it right down toward the deck. Running the front lower than the rear also builds rake, which sharpens rotation and helps kill the 2026 car's understeer.`;
+    return head + styleTail(style,'a touch more clearance for a safer platform in traffic and over kerbs','minimum clearance for maximum in-game downforce and rake');
+  },
+  rearRideHeight(t,v,style){
+    let head = (t.tags.bm>=6 || t.tags.kb>=6)
+      ? `Raised slightly to <b>${v}/41</b> alongside the front to keep the floor off ${t.name}'s bumps and kerbs — low is fast in the F1 26 game, but grounding out the rear costs more grip than the low ride buys.`
+      : `Run low at <b>${v}/41</b> — ${t.name}'s smooth surface lets you take the rear down for maximum in-game downforce, kept a step higher than the front so the car keeps a little rake for rotation.`;
+    return head + styleTail(style,'a touch more clearance for stability and floor protection','minimum rear ride height for maximum in-game downforce');
+  },
+  brakePressure(t,v,style){
+    let head = (t.tags.gr<=5)
+      ? `Backed off to <b>${v}%</b> — ${t.name}'s lower-grip surface makes lock-ups easy under hard braking, so slightly less initial bite gives you a more progressive, controllable pedal into the heaviest zones.`
+      : `Run high at <b>${v}%</b> — ${t.name}'s grippy surface lets you lean hard on the brakes without locking up, so maximum pressure shortens braking distances into the heaviest zones (${topChallenge(t)}).`;
+    return head + ` Brake setup matters more than ever in F1 26 — early hands-on impressions of the 2026 cars (and the lock-ups seen repeatedly through pre-season testing and into the opening races) point to a forward weight shift under braking, smaller-diameter tyres and heavy regen combining to make the rear end genuinely twitchy on the brakes, so this value is kept deliberately conservative rather than maxed out.` + styleTail(style,'slightly less bite for a safer, more progressive pedal','a touch more bite for shorter braking distances — at the cost of a higher lock-up risk');
+  },
+  frontBrakeBias(t,v,style){
+    return `Set to <b>${v}%</b> toward the front — ${t.name} demands ${topChallenge(t)}, so the bias is tuned to load the front axle hard enough for strong stopping power and a sharp rotation on entry, without tipping into rear lock-ups that would spin the car. Worth dialling in carefully here: the 2026 cars brake very differently to the previous generation — smaller tyres and a much heavier reliance on brake-by-wire and energy regeneration mean a bias that's even slightly off is a far bigger deal than it used to be.` + styleTail(style,'a half-step rearward for a more stable, lock-up-resistant pedal','a half-step forward to sharpen rotation on initial braking');
+  },
+  frontTyrePressure(t,v,style){
+    return `Set to <b>${v} psi</b> cold — high enough to manage ${t.name}'s ${t.tags.td>=7?'heavy':'moderate'} tyre degradation and keep the front tyres in their working range, but not so high that you lose contact-patch size and outright grip in the corners. Treat this one as a rougher estimate than the rest: the 2026 cars run physically smaller-diameter tyres than the previous generation, which shifts the whole pressure-to-grip relationship, and the sim-racing community is still mapping out where the new sweet spots sit at each track.` + styleTail(style,'a touch more pressure for durability across a stint','a touch less pressure for maximum grip on a single push lap');
+  },
+  rearTyrePressure(t,v,style){
+    return `Set to <b>${v} psi</b> cold — balanced against the front to keep the rear axle planted under traction (especially given ${topChallenge(t)}) while still building enough heat to stay in the tyre's operating window. Same caveat as the front: smaller 2026 tyres mean the old pressure baselines don't carry straight over, so use this as a launch point and trim it against your own in-game pressure readouts.` + styleTail(style,'a touch more pressure for rear-tyre survival in race trim','a touch less pressure for maximum rear bite over one lap');
+  },
+};
+
+// ---- real community meta setups (simracingsetup.com "Official SRS", dry race, 2026-07-10) ----
+// The F1 26 meta is empirically tuned per track and does NOT follow track tags
+// (e.g. Montreal is near-max downforce despite being a "low-df" circuit), so the
+// app outputs these measured values directly rather than a formula approximation.
+// Order: [fw, rw, onT, offT, fCam, rCam, fToe, rToe, fSus, rSus, fARB, rARB, fRH, rRH, bp, fbb, ftp, rtp]
+const META = {
+  melbourne:[42,12,85,30,-3.5,-2.0,0,0.1,39,3,3,11,20,45,100,56,28.5,21],
+  shanghai:[41,26,90,30,-3.5,-2.0,0,0.1,40,4,2,10,21,43,100,57,28,23],
+  suzuka:[45,15,100,25,-3.5,-2.0,0,0.1,41,1,1,15,18,43,100,56,27,24.5],
+  sakhir:[39,30,90,50,-3.5,-2.0,0,0.1,39,5,8,12,20,44,100,56,25,20.5],
+  jeddah:[31,10,85,30,-3.5,-2.0,0,0.1,36,5,3,11,20,46,100,56,27.8,21.6],
+  miami:[19,6,85,40,-3.5,-2.0,0,0.1,40,10,1,12,21,46,100,57,26.5,20.5],
+  montreal:[42,37,90,35,-3.5,-2.0,0,0.1,38,10,2,14,20,45,100,56,26,20.5],
+  monaco:[50,50,75,35,-3.5,-2.0,0,0.1,35,5,1,5,24,50,100,55,24.4,20.5],
+  barcelona:[40,28,80,35,-3.5,-2.0,0,0.1,41,10,1,13,23,46,100,56,23.8,20.5],
+  madring:[50,35,80,35,-3.5,-2.0,0,0.1,38,3,1,7,22,46,100,57,27,20.5],
+  redbullring:[40,20,80,35,-3.5,-2.0,0,0.1,38,8,2,12,21,46,100,57,25.5,21.5],
+  silverstone:[40,25,100,30,-3.5,-2.0,0,0.1,41,10,1,8,21,45,100,58,27,21],
+  spa:[20,5,100,35,-3.5,-2.0,0,0.1,40,5,1,15,23,48,100,57,24,20.5],
+  hungaroring:[50,50,100,30,-3.5,-2.0,0,0.1,41,13,2,8,21,40,100,55,29.5,20.5],
+  zandvoort:[48,40,90,35,-3.5,-2.0,0,0.1,39,20,5,16,22,47,100,57,24,20.5],
+  monza:[18,4,80,40,-3.5,-2.0,0,0.1,40,4,1,10,23,47,100,57,29.5,25],
+  baku:[33,11,80,35,-3.5,-2.0,0,0.1,35,5,4,6,24,46,100,57,24.2,20.5],
+  marinabay:[50,42,80,35,-3.5,-2.0,0,0.1,34,4,4,10,22,47,100,57,23.5,20.5],
+  cota:[46,34,80,35,-3.5,-2.0,0,0.1,38,3,1,4,20,46,100,57,26,20.5],
+  mexico:[48,44,90,45,-3.5,-2.0,0,0.1,37,4,1,9,21,47,100,57,25,20.5],
+  interlagos:[48,28,80,35,-3.5,-2.0,0,0.1,38,1,1,2,23,46,100,56,28,21],
+  vegas:[24,5,80,40,-3.5,-2.0,0,0.1,33,3,1,2,23,47,100,57,26,23],
+  lusail:[48,32,100,40,-3.5,-2.0,0,0.1,38,30,2,8,21,47,100,56,28.5,21.5],
+  yasmarina:[46,28,90,35,-3.5,-2.0,0,0.1,39,8,1,6,22,46,100,56,28,21],
+};
+
+// ---- generation -----------------------------------------------------------
+function genSetup(track, styleKey){
+  const s = STYLE[styleKey];
+  const t = track.tags;
+  const cTotal = track.corners.slow + track.corners.medium + track.corners.fast;
+  const corneringDemand = (track.corners.medium + track.corners.fast) / cTotal * 10;
+
+  // ── Real community meta values, looked up per track (see META above) ──────
+  // "stable" = the measured meta setup verbatim. "aggressive" nudges it toward
+  // a sharper quali trim (a touch less wing, more diff rotation, stiffer, lower).
+  const M = META[track.id] || [30,25,90,35,-3.5,-2.0,0,0.1,38,6,1,10,22,46,100,56,26,21];
+  const A = styleKey === 'aggressive';
+  const fw  = clip(r0(M[0]  + (A?-4:0)), 4, 50);
+  const rw  = clip(r0(M[1]  + (A?-5:0)), 4, 50);
+  const onT = clip(r5(M[2]  + (A?-5:0)), 50, 100);
+  const offT= clip(r5(M[3]  + (A?-5:0)), 20, 55);
+  const fCam= M[4];
+  const rCam= M[5];
+  const fToe= M[6];
+  const rToe= M[7];
+  const fSus= clip(r0(M[8]  + (A?2:0)), 1, 41);
+  const rSus= clip(r0(M[9]  + (A?2:0)), 1, 41);
+  const fARB= clip(r0(M[10] + (A?2:0)), 1, 21);
+  const rARB= clip(r0(M[11] + (A?2:0)), 1, 21);
+  const fRH = clip(r0(M[12] + (A?-2:0)), 10, 50);
+  const rRH = clip(r0(M[13] + (A?-3:0)), 30, 60);
+  const bp  = M[14];
+  const fbb = clip(r0(M[15] + (A?1:0)), 50, 63);
+  const ftp = M[16];
+  const rtp = M[17];
+
+  const result = [
+    { name:"Aerodynamics", params:[
+      { label:"Front Wing", value:`${fw}`, unit:"/ 50", why:EXPLAIN.frontWing(track,fw,styleKey) },
+      { label:"Rear Wing", value:`${rw}`, unit:"/ 50", why:EXPLAIN.rearWing(track,rw,styleKey) },
+    ]},
+    { name:"Transmission", params:[
+      { label:"On-Throttle Diff", value:`${onT}`, unit:"%", why:EXPLAIN.onThrottleDiff(track,onT,styleKey) },
+      { label:"Off-Throttle Diff", value:`${offT}`, unit:"%", why:EXPLAIN.offThrottleDiff(track,offT,styleKey) },
+    ]},
+    { name:"Suspension Geometry", params:[
+      { label:"Front Camber", value:`${fCam.toFixed(2)}`, unit:"°", why:EXPLAIN.frontCamber(track,fCam.toFixed(2),styleKey) },
+      { label:"Rear Camber", value:`${rCam.toFixed(2)}`, unit:"°", why:EXPLAIN.rearCamber(track,rCam.toFixed(2),styleKey) },
+      { label:"Front Toe (Out)", value:`${fToe.toFixed(2)}`, unit:"°", why:EXPLAIN.frontToe(track,fToe.toFixed(2),styleKey) },
+      { label:"Rear Toe (In)", value:`${rToe.toFixed(2)}`, unit:"°", why:EXPLAIN.rearToe(track,rToe.toFixed(2),styleKey) },
+    ]},
+    { name:"Suspension", params:[
+      { label:"Front Suspension", value:`${fSus}`, unit:"/ 41", why:EXPLAIN.frontSuspension(track,fSus,styleKey) },
+      { label:"Rear Suspension", value:`${rSus}`, unit:"/ 41", why:EXPLAIN.rearSuspension(track,rSus,styleKey) },
+      { label:"Front Anti-Roll Bar", value:`${fARB}`, unit:"/ 41", why:EXPLAIN.frontARB(track,fARB,styleKey) },
+      { label:"Rear Anti-Roll Bar", value:`${rARB}`, unit:"/ 41", why:EXPLAIN.rearARB(track,rARB,styleKey) },
+      { label:"Front Ride Height", value:`${fRH}`, unit:"", why:EXPLAIN.frontRideHeight(track,fRH,styleKey) },
+      { label:"Rear Ride Height", value:`${rRH}`, unit:"", why:EXPLAIN.rearRideHeight(track,rRH,styleKey) },
+    ]},
+    { name:"Brakes", params:[
+      { label:"Brake Pressure", value:`${bp}`, unit:"%", why:EXPLAIN.brakePressure(track,bp,styleKey) },
+      { label:"Front Brake Bias", value:`${fbb}`, unit:"%", why:EXPLAIN.frontBrakeBias(track,fbb,styleKey) },
+    ]},
+    { name:"Tyres", params:[
+      { label:"Front Tyre Pressure", value:`${ftp}`, unit:"psi", why:EXPLAIN.frontTyrePressure(track,ftp,styleKey) },
+      { label:"Rear Tyre Pressure", value:`${rtp}`, unit:"psi", why:EXPLAIN.rearTyrePressure(track,rtp,styleKey) },
+    ]},
+  ];
+  result.brakeBiasBase = fbb;
+  result.onTheFlyBiasTip = onTheFlyBias(track, fbb, styleKey);
+  return result;
+}
+
+// ---- app state & rendering -------------------------------------------------
+const state = { view:"grid", trackId:null, style:"stable" };
+const app = document.getElementById('app');
+const backBtn = document.getElementById('backBtn');
+const styleToggle = document.getElementById('styleToggle');
+
+styleToggle.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button');
+  if(!btn) return;
+  state.style = btn.dataset.style;
+  [...styleToggle.querySelectorAll('button')].forEach(b=>b.classList.toggle('active', b===btn));
+  render();
+});
+backBtn.addEventListener('click', ()=>{
+  // Let the browser's own history take us back to the grid (keeps Back/Forward in sync with in-app nav).
+  if(location.hash && location.hash!=='#') history.back();
+  else { state.view='grid'; state.trackId=null; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+});
+
+function go(trackId){
+  // Push a real history entry so the browser's Back button returns to the grid.
+  location.hash = 'track/' + trackId;
+}
+
+// Keep app state in sync with the URL hash — covers browser Back/Forward, refresh and deep links.
+function applyHash(){
+  const m = /^#track\/(.+)$/.exec(location.hash);
+  if(m && TRACKS.some(t=>t.id===m[1])){
+    state.view='detail'; state.trackId=m[1];
+  } else {
+    state.view='grid'; state.trackId=null;
+  }
+  render();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+window.addEventListener('hashchange', applyHash);
+
+function dfLabel(n){ return n<=2?'Very Low':n<=4?'Low':n<=6?'Medium':n<=8?'High':'Very High'; }
+
+function renderGrid(){
+  backBtn.style.display = 'none';
+  app.innerHTML = `
+    <div class="notice">
+      <b>F1 26 setup note —</b> the 2026 regulations bring smaller, lighter cars with active aerodynamics, smaller tyres
+      and a much higher reliance on electrical (ERS) deployment for straight-line speed, at the cost of significantly
+      less mechanical and ground-effect downforce than the 2022-25 generation. Early hands-on impressions from the sim
+      racing community (sites tracking the F1 26 DLC's launch) line up around a few practical conclusions baked into
+      every recommendation below: <b>run more wing than you're used to</b> (the cars need the aero help in the corners,
+      and active aero/ERS covers more of the straight-line cost than a low-drag rear wing used to); <b>run a lower
+      on-throttle differential</b> than F1 25 (less mechanical grip plus a huge instant hit of ERS torque means an
+      aggressively locked diff just spins the rear up); and <b>treat brakes and tyre pressures as the most
+      track-and-feel-dependent settings of the lot</b> — lock-ups have been a recurring theme in early 2026 running, and
+      the smaller tyres mean old pressure baselines don't carry over cleanly. Use everything here as an
+      evidence-informed starting point, then trust your own seat-of-the-pants feedback over any single number.
+    </div>
+    <h2 class="section-title">2026 Calendar — select a circuit</h2>
+    <div class="track-grid">
+      ${TRACKS.map(t=>`
+        <div class="track-card" data-id="${t.id}">
+          <div class="tc-row">
+            <span class="tc-round">ROUND ${String(t.round).padStart(2,'0')}</span>
+            <span class="tc-flag">${t.flag}</span>
+          </div>
+          <div class="tc-name">${t.name}${t.isNew?'<span class="badge new">New for 26</span>':''}</div>
+          <div class="tc-country">${t.country} · ${t.length} · ${t.laps} laps</div>
+          <div class="tc-meta">
+            <div><b>${t.corners.slow+t.corners.medium+t.corners.fast}</b>corners</div>
+            <div><b>${t.corners.slow}S / ${t.corners.medium}M / ${t.corners.fast}F</b>slow/med/fast</div>
+          </div>
+          <div class="tc-df"><i style="width:${t.tags.df*10}%"></i></div>
+          <div class="tc-df-label">Downforce demand — ${dfLabel(t.tags.df)}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  app.querySelectorAll('.track-card').forEach(card=>{
+    card.addEventListener('click', ()=> go(card.dataset.id));
+  });
+}
+
+function renderDetail(){
+  backBtn.style.display = 'inline-flex';
+  const track = TRACKS.find(t=>t.id===state.trackId);
+  const cats = genSetup(track, state.style);
+  const cTotal = track.corners.slow+track.corners.medium+track.corners.fast;
+  const pct = n => Math.round(n/cTotal*100);
+  const styleObj = STYLE[state.style];
+
+  app.innerHTML = `
+    <div class="hero">
+      <div class="hero-left">
+        <div class="hero-flag">${track.flag}</div>
+        <div>
+          <h2>${track.name}${track.isNew?'<span class="badge new">New for 26</span>':''}</h2>
+          <div class="sub">Round ${track.round} · ${track.country} · ${track.length} · ${track.laps} laps</div>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="v">${cTotal}</div><div class="l">Corners</div></div>
+        <div class="hero-stat"><div class="v">${dfLabel(track.tags.df)}</div><div class="l">Downforce need</div></div>
+        <div class="hero-stat"><div class="v">${dfLabel(track.tags.bm)}</div><div class="l">Bumpiness</div></div>
+        <div class="hero-stat"><div class="v">${dfLabel(track.tags.td)}</div><div class="l">Tyre wear</div></div>
+      </div>
+    </div>
+    ${track.dataNote ? `<div class="notice"><b>Limited real-world reference:</b> ${track.dataNote}</div>` : ``}
+
+    <div class="layout">
+      <div class="left-col">
+        <div class="panel">
+          <h3>Track Characteristics</h3>
+          <div class="subhead">Corner profile</div>
+          <div class="corner-bars">
+            <div class="corner-row"><span class="lbl">Slow</span><span class="bar slow"><i style="width:${pct(track.corners.slow)}%"></i></span><span class="num">${track.corners.slow}</span></div>
+            <div class="corner-row"><span class="lbl">Medium</span><span class="bar medium"><i style="width:${pct(track.corners.medium)}%"></i></span><span class="num">${track.corners.medium}</span></div>
+            <div class="corner-row"><span class="lbl">Fast</span><span class="bar fast"><i style="width:${pct(track.corners.fast)}%"></i></span><span class="num">${track.corners.fast}</span></div>
+          </div>
+          <div class="subhead">Key straights / DRS zones</div>
+          <ul class="info-list straights">${track.straights.map(s=>`<li>${s}</li>`).join('')}</ul>
+          <div class="subhead">Main setup challenges</div>
+          <ul class="info-list">${track.challenges.map(c=>`<li>${c}</li>`).join('')}</ul>
+          <div class="style-note">
+            <b>${styleObj.label} philosophy:</b> ${styleObj.blurb}
+          </div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        ${cats.map(cat=>`
+          <div class="panel cat">
+            <div class="cat-head"><span class="dot"></span><h4>${cat.name}</h4></div>
+            <div class="param-grid">
+              ${cat.params.map(p=>`
+                <div class="param">
+                  <div class="param-top">
+                    <span class="param-name">${p.label}</span>
+                    <span class="param-value">${p.value}<small> ${p.unit}</small></span>
+                  </div>
+                  <div class="param-why">${p.why}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          ${cat.name === "Brakes" ? `
+          <div class="panel cat brake-tip">
+            <div class="cat-head"><span class="dot" style="background:var(--accent2)"></span><h4>Adjusting Brake Bias On The Fly — Corner By Corner</h4></div>
+            <div class="param-why" style="font-size:13px; line-height:1.65;">${cats.onTheFlyBiasTip}</div>
+          </div>` : ``}
+        `).join('')}
+        <div class="footer-note">
+          Values shown are community-informed starting points for the F1 26 handling model — built from this circuit's
+          corner mix, braking demands, surface and the 2026 cars' lower mechanical downforce / higher ERS reliance, and
+          cross-checked against early F1 26 community impressions (more wing, lower on-throttle diff, brakes and tyre
+          pressures as the most track-dependent settings of all). Use them as a baseline and adjust to taste for your
+          driving style, assists, fuel load and tyre compound.
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function render(){
+  if(state.view==='grid') renderGrid();
+  else renderDetail();
+}
+
+applyHash();
+</script>
+</body>
+</html>
